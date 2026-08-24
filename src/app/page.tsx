@@ -664,7 +664,7 @@ function TasksPanelContent({ t }: { t: any }) {
           type="text" 
           value={newTaskText}
           onChange={(e) => setNewTaskText(e.target.value)}
-          placeholder={t.addTask + "..."}
+          placeholder={t('addTaskPlaceholder')}
           className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white outline-none focus:border-primary transition-colors text-sm"
         />
         <button 

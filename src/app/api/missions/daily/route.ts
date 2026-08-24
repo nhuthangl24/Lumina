@@ -9,10 +9,46 @@ function todayStr() {
 }
 
 const MISSION_TEMPLATES = [
-  { id: "daily-login", name: "ÄÄƒng nháº­p hÃ ng ngÃ y", description: "ÄÄƒng nháº­p vÃ o Lumina hÃ´m nay", type: "login", target: 1, coinReward: 20, xpReward: 20, gemReward: 0 },
-  { id: "daily-pomodoro-2", name: "Táº­p trung nhá»", description: "HoÃ n thÃ nh 2 Pomodoro", type: "complete_pomodoro", target: 2, coinReward: 30, xpReward: 50, gemReward: 0 },
-  { id: "daily-task-3", name: "Giáº£i quyáº¿t cÃ´ng viá»‡c", description: "HoÃ n thÃ nh 3 Task", type: "complete_task", target: 3, coinReward: 25, xpReward: 40, gemReward: 0 },
-  { id: "daily-focus-60", name: "PhiÃªn táº­p trung sÃ¢u", description: "Táº­p trung tá»•ng cá»™ng 60 phÃºt", type: "focus_minutes", target: 60, coinReward: 50, xpReward: 80, gemReward: 0 },
+  {
+    id: "daily-login",
+    name: "Đăng nhập hàng ngày",
+    description: "Đăng nhập vào Lumina hôm nay",
+    type: "login",
+    target: 1,
+    coinReward: 20,
+    xpReward: 20,
+    gemReward: 0,
+  },
+  {
+    id: "daily-pomodoro-2",
+    name: "Tập trung nhỏ",
+    description: "Hoàn thành 2 Pomodoro",
+    type: "complete_pomodoro",
+    target: 2,
+    coinReward: 30,
+    xpReward: 50,
+    gemReward: 0,
+  },
+  {
+    id: "daily-task-3",
+    name: "Giải quyết công việc",
+    description: "Hoàn thành 3 Task",
+    type: "complete_task",
+    target: 3,
+    coinReward: 25,
+    xpReward: 40,
+    gemReward: 0,
+  },
+  {
+    id: "daily-focus-60",
+    name: "Phiên tập trung sâu",
+    description: "Tập trung tổng cộng 60 phút",
+    type: "focus_minutes",
+    target: 60,
+    coinReward: 50,
+    xpReward: 80,
+    gemReward: 0,
+  },
 ];
 
 // GET - fetch today's missions (auto-create if not exist)
