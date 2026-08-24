@@ -6,7 +6,7 @@ import Link from "next/link";
 import { BottomDock } from "@/components/focus/BottomDock";
 import { FloatingTimer } from "@/components/focus/FloatingTimer";
 import { GuidedTour } from "@/components/focus/GuidedTour";
-import { translations, Language } from "@/lib/i18n";
+import { useLanguage, Language } from "@/lib/LanguageContext";
 import { X, Plus, Check, Coins, Info, Settings2, Sparkles, Volume2, Store, Globe, Clock, Headphones, Users, User, Play, SkipForward, SkipBack, Cloud } from "lucide-react";
 import { MarketplaceModal } from "@/components/marketplace/MarketplaceModal";
 import { ChatPanel } from "@/components/chat/ChatPanel";
@@ -30,6 +30,7 @@ import { RewardToastSystem, StreakWidget } from "@/components/focus/RewardSystem
 import { AchievementPopup, useAchievements } from "@/components/focus/AchievementsSystem";
 import { GlobalAudioPlayers } from "@/components/focus/GlobalAudioPlayers";
 import { useAmbientStore } from "@/store/useAmbientStore";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export default function ImmersiveFocusPage() {
   const { data: session } = useSession();
@@ -37,7 +38,7 @@ export default function ImmersiveFocusPage() {
   const [activeModal, setActiveModal] = useState<"marketplace" | "settings" | "dashboard" | null>(null);
   const [showFriends, setShowFriends] = useState(false);
 
-  const [lang, setLang] = useState<"en" | "vi" | "zh">("vi");
+  const { lang, setLang, t } = useLanguage();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
@@ -176,7 +177,7 @@ export default function ImmersiveFocusPage() {
     };
   }, []);
   
-  const t = translations[lang];
+
 
   return (
     <>
@@ -222,6 +223,8 @@ export default function ImmersiveFocusPage() {
               </button>
             ))}
           </div>
+
+          {session && <NotificationBell />}
 
           {session ? (
             <>
@@ -276,7 +279,7 @@ export default function ImmersiveFocusPage() {
             </>
           ) : (
             <Link href="/login" className="bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 px-5 py-2.5 rounded-xl flex items-center gap-2 text-white shadow-lg transition-colors font-medium text-sm pointer-events-auto">
-              {t.login}
+              {t("login")}
             </Link>
           )}
         </div>
@@ -410,10 +413,10 @@ export default function ImmersiveFocusPage() {
                   <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4">
                     <Sparkles className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="text-white font-semibold mb-2">{t.joinCommunity}</h3>
-                  <p className="text-white/50 text-sm mb-6">{t.joinDesc}</p>
+                  <h3 className="text-white font-semibold mb-2">{t("joinCommunity")}</h3>
+                  <p className="text-white/50 text-sm mb-6">{t("joinDesc")}</p>
                   <Link href="/login" className="w-full py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-xl transition-colors">
-                    {t.signUpFree}
+                    {t("signUpFree")}
                   </Link>
                 </div>
               )}
@@ -464,7 +467,7 @@ export default function ImmersiveFocusPage() {
                     </button>
                   </div>
                   <div className="flex-1 overflow-y-auto custom-scrollbar relative">
-                    <SettingsPanelContent t={t} onClose={() => setActiveModal(null)} />
+                    <SettingsPanelContent onClose={() => setActiveModal(null)} />
                   </div>
                 </>
               )}
@@ -606,6 +609,17 @@ function TasksPanelContent({ t }: { t: any }) {
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ done: !task.done })
       });
+      
+      if (!task.done) {
+        // Just changed from undone to done -> Update Daily Mission
+        await fetch("/api/missions/daily", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "complete_task", amount: 1 })
+        });
+        window.dispatchEvent(new Event("promodo_mission_progress"));
+      }
+
       window.dispatchEvent(new Event('promodo_tasks_updated'));
     }
   };
@@ -704,7 +718,7 @@ function NotesPanelContent({ t }: { t: any }) {
     <div className="h-full flex flex-col p-5">
       <textarea 
         className="flex-1 w-full bg-transparent border-none outline-none text-white/90 resize-none placeholder:text-white/30 text-sm leading-relaxed"
-        placeholder={t.notesPlaceholder}
+        placeholder={t("notesPlaceholder")}
         value={note}
         onChange={handleChange}
       />
@@ -737,7 +751,7 @@ function MusicPanelContent({ t }: { t: any }) {
       </div>
       
       <div>
-        <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-3">{t.ambientSounds}</h4>
+        <h4 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-3">{t("ambientSounds")}</h4>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <span className="text-white text-sm w-16">Rain</span>
@@ -867,10 +881,10 @@ function MarketplacePanelContent({ onBuy, t }: { onBuy: (url: string) => void, t
         <div className="w-16 h-16 bg-yellow-400/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <Store className="w-8 h-8 text-yellow-400" />
         </div>
-        <h3 className="text-white font-semibold mb-2">{t.marketplaceLocked}</h3>
-        <p className="text-white/50 text-sm mb-6">{t.marketplaceLockedDesc}</p>
+        <h3 className="text-white font-semibold mb-2">{t("marketplaceLocked")}</h3>
+        <p className="text-white/50 text-sm mb-6">{t("marketplaceLockedDesc")}</p>
         <Link href="/login" className="block w-full py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-xl transition-colors">
-          {t.login}
+          {t("login")}
         </Link>
       </div>
     );
@@ -898,7 +912,7 @@ function MarketplacePanelContent({ onBuy, t }: { onBuy: (url: string) => void, t
                 <div className="p-4 flex justify-between items-center">
                   <div>
                     <h4 className="text-white font-medium text-sm">{theme.name}</h4>
-                    <p className="text-yellow-400 text-xs font-bold mt-1">{theme.price === 0 ? t.free : `${theme.price} ${t.coins}`}</p>
+                    <p className="text-yellow-400 text-xs font-bold mt-1">{theme.price === 0 ? t.free : `${theme.price} ${t("coins")}`}</p>
                   </div>
                   <button 
                     disabled={isBuying && !isOwned}
@@ -926,7 +940,7 @@ function MarketplacePanelContent({ onBuy, t }: { onBuy: (url: string) => void, t
                   </div>
                   <div>
                     <h4 className="text-white font-medium">{timer.name}</h4>
-                    <p className="text-yellow-400 text-sm font-bold mt-1">{timer.price === 0 ? t.free : `${timer.price} ${t.coins}`}</p>
+                    <p className="text-yellow-400 text-sm font-bold mt-1">{timer.price === 0 ? t.free : `${timer.price} ${t("coins")}`}</p>
                   </div>
                 </div>
                 <button 
@@ -953,7 +967,7 @@ function MarketplacePanelContent({ onBuy, t }: { onBuy: (url: string) => void, t
                   </div>
                   <div>
                     <h4 className="text-white font-medium">{sound.name}</h4>
-                    <p className="text-yellow-400 text-sm font-bold mt-1">{sound.price === 0 ? t.free : `${sound.price} ${t.coins}`}</p>
+                    <p className="text-yellow-400 text-sm font-bold mt-1">{sound.price === 0 ? t.free : `${sound.price} ${t("coins")}`}</p>
                   </div>
                 </div>
                 <button 
@@ -972,7 +986,8 @@ function MarketplacePanelContent({ onBuy, t }: { onBuy: (url: string) => void, t
   );
 }
 
-function SettingsPanelContent({ t, onClose }: { t: any, onClose: () => void }) {
+function SettingsPanelContent({ onClose }: { onClose: () => void }) {
+  const { t } = useLanguage();
   const [focusLength, setFocusLength] = useState(25);
   const [breakLength, setBreakLength] = useState(5);
   const [totalSessions, setTotalSessions] = useState(4);
@@ -1078,11 +1093,11 @@ function SettingsPanelContent({ t, onClose }: { t: any, onClose: () => void }) {
         </h4>
         <div className="space-y-3 mb-6">
           {Object.entries({
-            clock: "Đồng hồ & Thời tiết",
-            stats: "Chỉ số cấp độ",
-            tasks: "Nhiệm vụ nhỏ",
-            music: "Trình phát nhạc",
-            ambient: "Mix âm thanh",
+            clock: t('clockWeather'),
+            stats: t('statsLevel'),
+            tasks: t('miniTasks'),
+            music: t('musicPlayer'),
+            ambient: t('ambientMixer'),
           }).map(([key, label]) => (
             <div key={key} className="flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-colors">
               <span className="text-white text-sm font-semibold">{label}</span>

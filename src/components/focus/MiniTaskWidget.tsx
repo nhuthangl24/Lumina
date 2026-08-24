@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Check, CheckCircle2, ListTodo, X } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export function MiniTaskWidget() {
   const [isVisible, setIsVisible] = useState(true);
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const [tasks, setTasks] = useState<any[]>([]);
 
   useEffect(() => {
@@ -35,6 +37,16 @@ export function MiniTaskWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: true }),
       });
+      
+      // Update Daily Mission for completing a task
+      await fetch("/api/missions/daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "complete_task", amount: 1 })
+      });
+      
+      // Dispatch event so DailyMissionsWidget refreshes
+      window.dispatchEvent(new Event("promodo_mission_progress"));
     } catch (error) {
       console.error(error);
     }
@@ -55,7 +67,7 @@ export function MiniTaskWidget() {
 
       <div className="flex items-center gap-2">
         <ListTodo className="w-4 h-4 text-emerald-400" />
-        <h3 className="text-white text-sm font-semibold">Up Next</h3>
+        <h3 className="text-white text-sm font-semibold">{t('upNext')}</h3>
       </div>
       
       {tasks.length > 0 ? (
@@ -77,7 +89,7 @@ export function MiniTaskWidget() {
       ) : (
         <div className="py-4 flex flex-col items-center justify-center text-center">
           <CheckCircle2 className="w-8 h-8 text-white/20 mb-2" />
-          <p className="text-white/50 text-xs">All caught up!</p>
+          <p className="text-white/50 text-xs">{t('allCaughtUp')}</p>
         </div>
       )}
     </motion.div>

@@ -7,9 +7,11 @@ import { Play, Pause, RotateCcw, CheckCircle, Clock, Square, StepForward } from 
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export function FloatingTimer() {
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const { roomId, isHost, timeLeft: storeTimeLeft, initialTime: storeInitialTime, isRunning: storeIsRunning, mode: storeMode, setIsRunning: storeSetIsRunning, setMode: storeSetMode, setTimeLeft: storeSetTimeLeft, setInitialTime: storeSetInitialTime } = useTimerStore();
   const [localTimeLeft, setLocalTimeLeft] = useState(25 * 60);
   const [localInitialTime, setLocalInitialTime] = useState(25 * 60);
@@ -416,13 +418,13 @@ export function FloatingTimer() {
           onClick={() => handleModeChange("focus")}
           className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "focus" ? (timerStyle === "cyberpunk" ? "bg-fuchsia-500 text-white shadow-[0_0_15px_rgba(217,70,239,0.5)]" : timerStyle === "zen" ? "bg-[#d4a373] text-white" : "bg-primary text-white shadow-lg") : "text-white/50 hover:text-white"}`}
         >
-          Focus
+          {t('focus')}
         </button>
         <button 
           onClick={() => handleModeChange("break")}
           className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "break" ? (timerStyle === "cyberpunk" ? "bg-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.5)]" : timerStyle === "zen" ? "bg-[#8cb369] text-white" : "bg-emerald-500 text-white shadow-lg") : "text-white/50 hover:text-white"}`}
         >
-          Break
+          {t('break')}
         </button>
       </div>
 
@@ -430,7 +432,7 @@ export function FloatingTimer() {
       {/* Middle: Timer Text (Perfectly Centered) */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center justify-center w-full pointer-events-none mt-2">
         <div className={`text-sm font-semibold uppercase tracking-widest mb-1 ${timerStyle === "zen" ? "text-[#d4a373]/70 font-serif" : timerStyle === "cyberpunk" ? "text-cyan-400 font-mono" : "text-white/40"}`}>
-          Session {sessionCount}/{totalSessions}
+          {t('session')} {sessionCount}/{totalSessions}
         </div>
         <div 
           className={`text-[5.5rem] leading-none font-extrabold tracking-tighter tabular-nums ${timerStyle === "zen" ? "text-[#fdf6e3] font-serif font-light" : timerStyle === "cyberpunk" ? "text-fuchsia-400 font-mono drop-shadow-[0_0_15px_rgba(217,70,239,0.8)]" : "text-white font-heading drop-shadow-2xl"}`}

@@ -11,9 +11,11 @@ import {
   Settings,
   Store,
   Building2,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 const DOCK_ITEMS: Array<{ id: string, icon: any, label: string, action?: boolean, href?: string }> = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", action: true },
@@ -24,6 +26,7 @@ const DOCK_ITEMS: Array<{ id: string, icon: any, label: string, action?: boolean
   { id: "chat", icon: MessageSquare, label: "Chat", action: true },
   { id: "room", icon: Building2, label: "Phòng Học", action: true },
   { id: "marketplace", icon: Store, label: "Marketplace", action: true },
+  { id: "leaderboard", icon: Trophy, label: "Bảng xếp hạng", action: true },
   { id: "settings", icon: Settings, label: "Settings", action: true },
 ];
 
@@ -96,6 +99,10 @@ export function BottomDock({ onOpenPanel }: { onOpenPanel: (id: string) => void 
 
         return (
           <button key={item.id} onClick={() => {
+            if (item.id === "leaderboard") {
+              toast("Sắp ra mắt!", { description: "Tính năng Bảng xếp hạng đang được phát triển." });
+              return;
+            }
             if (unreadState[item.id]) setUnreadState(prev => ({ ...prev, [item.id]: false }));
             onOpenPanel(item.id);
           }}>

@@ -65,6 +65,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { LanguageProvider } from "@/lib/LanguageContext";
 
 export default function RootLayout({
   children,
@@ -76,19 +77,21 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${outfit.variable} font-sans antialiased bg-black text-foreground flex h-screen overflow-hidden select-none`}
       >
-        <AuthProvider>
-          <main className="flex-1 flex flex-col h-full relative overflow-hidden">
-            {children}
-          </main>
-          <Toaster position="top-center" theme="dark" toastOptions={{
-            style: {
-              background: 'rgba(0,0,0,0.8)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: 'white'
-            }
-          }} />
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <main className="flex-1 flex flex-col h-full relative overflow-hidden">
+              {children}
+            </main>
+            <Toaster position="top-center" theme="dark" toastOptions={{
+              style: {
+                background: 'rgba(0,0,0,0.8)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'white'
+              }
+            }} />
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

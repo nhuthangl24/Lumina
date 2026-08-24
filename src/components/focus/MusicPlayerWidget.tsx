@@ -4,6 +4,7 @@ import { Music, Check } from "lucide-react";
 import Image from "next/image";
 import { useAmbientStore } from "@/store/useAmbientStore";
 import { useTimerStore } from "@/store/useTimerStore";
+import { useLanguage } from "@/lib/LanguageContext";
 
 declare global {
   interface Window {
@@ -30,6 +31,10 @@ export function MusicPlayerWidget() {
   const { spotifyId, setSpotifyId } = useAmbientStore(); // vẫn dùng tên biến cũ nhưng lưu YouTube ID
   const [inputValue, setInputValue] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [activeVideoId, setActiveVideoId] = useState("");
+  const { t } = useLanguage();
+  
   const [isPowerOn, setIsPowerOn] = useState(false);
   const [trackName, setTrackName] = useState("YouTube Player");
   const [artistName, setArtistName] = useState("Đang phát nhạc nền");
@@ -41,18 +46,25 @@ export function MusicPlayerWidget() {
   // Mặc định ID YouTube Lofi Girl nếu id hiện tại là của Spotify
   const currentVideoId = spotifyId.includes("37i9") ? "lTRiuFIWV54" : spotifyId;
 
-  // Lấy thông tin video YouTube
+  // Keep thumbnail error state in sync with video id
   useEffect(() => {
+    setImgError(false);
+    setActiveVideoId("");
+  }, [currentVideoId]);
+
+  // Lấy thông tin video YouTube (fallback nếu player chưa play)
+  useEffect(() => {
+    if (currentVideoId.startsWith('playlist:')) return;
     fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${currentVideoId}`)
       .then(res => res.json())
       .then(data => {
-        if (data && data.title) {
+        if (data && data.title && !activeVideoId) {
           setTrackName(data.title);
           setArtistName(data.author_name || "YouTube Video");
         }
       })
       .catch(() => {});
-  }, [currentVideoId]);
+  }, [currentVideoId, activeVideoId]);
 
   // Khởi tạo YouTube IFrame API
   useEffect(() => {
@@ -98,6 +110,14 @@ export function MusicPlayerWidget() {
             setIsIframeReady(true);
           },
           'onStateChange': (event: any) => {
+            if (event.target && event.target.getVideoData) {
+              const data = event.target.getVideoData();
+              if (data) {
+                if (data.title) setTrackName(data.title);
+                if (data.author) setArtistName(data.author);
+                if (data.video_id) setActiveVideoId(data.video_id);
+              }
+            }
             if (event.data === window.YT.PlayerState.ENDED) {
               if (isPlaylist && playerRef.current.nextVideo) {
                 playerRef.current.nextVideo();
@@ -184,7 +204,14 @@ export function MusicPlayerWidget() {
       {/* Header / Current Status */}
       <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
         <div className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-colors ${isPowerOn ? 'border-[#FF0000]/50 shadow-[0_0_15px_rgba(255,0,0,0.2)] animate-[spin_10s_linear_infinite]' : 'border-zinc-700'}`}>
-          <Image sizes="(max-width: 768px) 100vw, 33vw" src={`https://img.youtube.com/vi/${currentVideoId}/0.jpg`} fill alt="Vinyl" className={`object-cover ${!isPowerOn && 'grayscale'}`} />
+          <Image 
+            sizes="(max-width: 768px) 100vw, 33vw" 
+            src={imgError || (activeVideoId || currentVideoId).startsWith('playlist:') ? 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop' : `https://img.youtube.com/vi/${activeVideoId || currentVideoId}/0.jpg`} 
+            fill 
+            alt="Vinyl" 
+            onError={() => setImgError(true)}
+            className={`object-cover ${!isPowerOn && 'grayscale'}`} 
+          />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-3 h-3 bg-black rounded-full border border-zinc-800" />
           </div>
@@ -227,7 +254,7 @@ export function MusicPlayerWidget() {
           <form onSubmit={handleUpdatePlaylist} className="flex gap-2">
             <input 
               type="text" 
-              placeholder="Dán link YouTube hoặc Video ID vào đây..."
+              placeholder={t('musicDesc')}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-[#FF0000] transition-colors"
@@ -236,7 +263,7 @@ export function MusicPlayerWidget() {
               type="submit"
               className="bg-[#FF0000]/20 text-[#FF0000] hover:bg-[#FF0000]/30 px-3 rounded-xl transition-colors text-xs font-semibold flex items-center justify-center min-w-[50px]"
             >
-              {isSaved ? <Check className="w-4 h-4" /> : "Đổi"}
+              {isSaved ? <Check className="w-4 h-4" /> : t('changeMusic')}
             </button>
           </form>
 

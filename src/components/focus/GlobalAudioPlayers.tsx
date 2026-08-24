@@ -28,11 +28,11 @@ export function GlobalAudioPlayers() {
 
   return (
     <div style={{ display: "none" }}>
-      <audio ref={rainRef} src="https://actions.google.com/sounds/v1/water/rain_on_roof.ogg" loop />
-      <audio ref={cafeRef} src="https://actions.google.com/sounds/v1/crowds/restaurant_chatter.ogg" loop />
-      <audio ref={fireRef} src="https://actions.google.com/sounds/v1/ambiences/fire.ogg" loop />
-      <audio ref={officeRef} src="https://actions.google.com/sounds/v1/office/keyboard_typing_fast.ogg" loop />
-      <audio ref={oceanRef} src="https://actions.google.com/sounds/v1/water/waves_crashing_on_rock_beach.ogg" loop />
+      <audio ref={rainRef} src="/sounds/rain.mp3" loop />
+      <audio ref={cafeRef} src="/sounds/cafe.mp3" loop />
+      <audio ref={fireRef} src="/sounds/fire.mp3" loop />
+      <audio ref={officeRef} src="/sounds/office.mp3" loop />
+      <audio ref={oceanRef} src="/sounds/ocean.mp3" loop />
     </div>
   );
 }

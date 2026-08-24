@@ -43,6 +43,7 @@ model User {
   equippedItems    UserEquipped?
   ownedItems       UserItem[]
   unlockedThemes   Theme[]            @relation("ThemeToUser")
+  notifications    Notification[]
 }
 
 model Account {
@@ -316,4 +317,16 @@ model RoomStats {
   room              Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, date])
+}
+
+model Notification {
+  id           String   @id @default(cuid())
+  title        String
+  content      String
+  type         String   @default("USER") // SYSTEM or USER
+  targetUserId String?
+  isRead       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  
+  targetUser   User?    @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
 }

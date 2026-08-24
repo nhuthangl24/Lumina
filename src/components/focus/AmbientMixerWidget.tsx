@@ -2,10 +2,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { CloudRain, Coffee, Flame, Keyboard, Waves, X } from "lucide-react";
 import { useAmbientStore } from "@/store/useAmbientStore";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export function AmbientMixerWidget() {
   const [isVisible, setIsVisible] = useState(true);
   const { rainVolume, cafeVolume, fireVolume, officeVolume, oceanVolume, setVolume } = useAmbientStore();
+  const { t } = useLanguage();
 
   if (!isVisible) return null;
 
@@ -20,7 +22,7 @@ export function AmbientMixerWidget() {
         <X className="w-3 h-3 text-white/70" />
       </button>
 
-      <h3 className="text-white text-sm font-semibold mb-2">Âm Thanh Môi Trường</h3>
+      <h3 className="text-white text-sm font-semibold mb-2">{t('ambientSounds')}</h3>
       
       {/* Rain */}
       <div className="flex items-center gap-3 group">

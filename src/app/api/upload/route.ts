@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import { join } from "path";
+import { createClient } from "@supabase/supabase-js";
+
+// Dùng service role key để có quyền upload (bypass RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,18 +21,27 @@ export async function POST(req: NextRequest) {
 
     // Create unique filename
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const filename = `${uniqueSuffix}-${file.name.replace(/[^a-zA-Z0-9.]/g, "")}`;
-    const uploadDir = join(process.cwd(), "public/uploads");
-    
-    try {
-      await import("fs/promises").then(m => m.mkdir(uploadDir, { recursive: true }));
-    } catch (err) {}
-    
-    const filePath = join(uploadDir, filename);
+    const ext = file.name.split(".").pop() || "jpg";
+    const filename = `${uniqueSuffix}.${ext}`;
 
-    await writeFile(filePath, buffer);
+    const { data, error } = await supabaseAdmin.storage
+      .from("avatar")
+      .upload(filename, buffer, {
+        contentType: file.type,
+        upsert: false,
+      });
 
-    return NextResponse.json({ url: `/uploads/${filename}` });
+    if (error) {
+      console.error("Supabase upload error:", error);
+      return NextResponse.json({ error: "Upload failed: " + error.message }, { status: 500 });
+    }
+
+    // Lấy public URL
+    const { data: urlData } = supabaseAdmin.storage
+      .from("avatar")
+      .getPublicUrl(data.path);
+
+    return NextResponse.json({ url: urlData.publicUrl });
   } catch (e) {
     console.error("Upload error:", e);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });

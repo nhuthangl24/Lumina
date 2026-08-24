@@ -64,7 +64,11 @@ export function DailyMissionsWidget() {
     };
 
     window.addEventListener("promodo_pomodoro_complete", handlePomodoroComplete);
-    return () => window.removeEventListener("promodo_pomodoro_complete", handlePomodoroComplete);
+    window.addEventListener("promodo_mission_progress", fetchMissions);
+    return () => {
+      window.removeEventListener("promodo_pomodoro_complete", handlePomodoroComplete);
+      window.removeEventListener("promodo_mission_progress", fetchMissions);
+    };
   }, [session, fetchMissions]);
 
   if (!session) return null;
