@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String             @id @default(cuid())
+  name             String?
+  email            String?            @unique
+  emailVerified    DateTime?
+  password         String?
+  image            String?
+  coins            Int                @default(0)
+  gems             Int                @default(0)
+  xp               Int                @default(0)
+  level            Int                @default(1)
+  streak           Int                @default(0)
+  lastLoginDate    String?
+  totalPomodoros   Int                @default(0)
+  pomodorosToday   Int                @default(0)
+  lastPomodoroDate String?
+  equippedTheme    String             @default("https://images.unsplash.com/photo-1616047006789-b7af5afb8c20?q=80&w=3540&auto=format&fit=crop")
+  status           String             @default("offline")
+  role             String             @default("USER")
+  roomCode         String?
+  lastSeenAt       DateTime           @default(now())
+  accounts         Account[]
+  friendOf         Friendship[]       @relation("FriendUser")
+  friendships      Friendship[]       @relation("UserFriendships")
+  messagesReceived Message[]          @relation("MessageReceiver")
+  messagesSent     Message[]          @relation("MessageSender")
+  roomsHosted      Room[]             @relation("RoomHost")
+  roomMemberships  RoomMember[]       @relation("RoomMembership")
+  roomTasks        RoomTask[]         @relation("RoomTaskOwner")
+  sessions         Session[]
+  tasks            Task[]
+  achievements     UserAchievement[]
+  dailyMissions    UserDailyMission[]
+  equippedItems    UserEquipped?
+  ownedItems       UserItem[]
+  unlockedThemes   Theme[]            @relation("ThemeToUser")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  userId    String
+  text      String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Theme {
+  id    String @id @default(cuid())
+  name  String
+  price Int
+  url   String
+  users User[] @relation("ThemeToUser")
+}
+
+model MarketplaceItem {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  category    String
+  subCategory String?
+  price       Int             @default(0)
+  gemPrice    Int             @default(0)
+  rarity      String          @default("common")
+  imageUrl    String?
+  previewUrl  String?
+  tags        String?
+  isLimited   Boolean         @default(false)
+  isNew       Boolean         @default(true)
+  isFeatured  Boolean         @default(false)
+  unlockLevel Int             @default(0)
+  createdAt   DateTime        @default(now())
+  dailyShops  DailyShopItem[]
+  ownedBy     UserItem[]
+}
+
+model UserItem {
+  id          String          @id @default(cuid())
+  userId      String
+  itemId      String
+  purchasedAt DateTime        @default(now())
+  item        MarketplaceItem @relation(fields: [itemId], references: [id])
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+}
+
+model UserEquipped {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  roomThemeId    String?
+  weatherId      String?
+  lightingId     String?
+  ambientSoundId String?
+  petId          String?
+  effectId       String?
+  cursorId       String?
+  backgroundUrl  String  @default("https://images.unsplash.com/photo-1616047006789-b7af5afb8c20?q=80&w=3540&auto=format&fit=crop")
+  customUploads  String  @default("[]")
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyShop {
+  id    String          @id @default(cuid())
+  date  String          @unique
+  items DailyShopItem[]
+}
+
+model DailyShopItem {
+  id       String          @id @default(cuid())
+  shopId   String
+  itemId   String
+  discount Int             @default(0)
+  quantity Int             @default(-1)
+  item     MarketplaceItem @relation(fields: [itemId], references: [id])
+  shop     DailyShop       @relation(fields: [shopId], references: [id])
+}
+
+model DailyMissionTemplate {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  type        String
+  target      Int
+  coinReward  Int    @default(0)
+  gemReward   Int    @default(0)
+  xpReward    Int    @default(50)
+}
+
+model UserDailyMission {
+  id          String    @id @default(cuid())
+  userId      String
+  date        String
+  missionId   String
+  missionName String
+  description String
+  type        String
+  target      Int
+  progress    Int       @default(0)
+  completed   Boolean   @default(false)
+  coinReward  Int       @default(0)
+  gemReward   Int       @default(0)
+  xpReward    Int       @default(50)
+  claimedAt   DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, missionId])
+}
+
+model Achievement {
+  id          String            @id @default(cuid())
+  name        String
+  description String
+  icon        String?
+  condition   String
+  coinReward  Int               @default(0)
+  gemReward   Int               @default(0)
+  badgeId     String?
+  earnedBy    UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime    @default(now())
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  friend    User     @relation("FriendUser", fields: [friendId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String?
+  content    String
+  type       String   @default("TEXT")
+  roomId     String?
+  createdAt  DateTime @default(now())
+  receiver   User?    @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Room {
+  id              String            @id @default(cuid())
+  name            String
+  code            String            @unique
+  hostId          String
+  isPrivate       Boolean           @default(false)
+  maxMembers      Int               @default(10)
+  createdAt       DateTime          @default(now())
+  timerStatus     String            @default("idle")
+  timerStart      DateTime?
+  timerDuration   Int?
+  currentPlaylist String?
+  musicVotes      String?
+  host            User              @relation("RoomHost", fields: [hostId], references: [id])
+  achievements    RoomAchievement[]
+  challenges      RoomChallenge[]
+  members         RoomMember[]
+  stats           RoomStats[]
+  tasks           RoomTask[]
+}
+
+model RoomMember {
+  id       String   @id @default(cuid())
+  roomId   String
+  userId   String
+  joinedAt DateTime @default(now())
+  isKicked Boolean  @default(false)
+  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user     User     @relation("RoomMembership", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model RoomChallenge {
+  id           String   @id @default(cuid())
+  roomId       String
+  title        String
+  description  String
+  targetCount  Int
+  currentCount Int      @default(0)
+  rewardCoins  Int      @default(500)
+  rewardXp     Int      @default(50)
+  isCompleted  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model RoomAchievement {
+  id         String   @id @default(cuid())
+  roomId     String
+  type       String
+  unlockedAt DateTime @default(now())
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model RoomTask {
+  id          String   @id @default(cuid())
+  roomId      String
+  userId      String
+  content     String
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User     @relation("RoomTaskOwner", fields: [userId], references: [id])
+}
+
+model RoomStats {
+  id                String   @id @default(cuid())
+  roomId            String
+  date              String
+  totalFocusMinutes Int      @default(0)
+  totalPomodoros    Int      @default(0)
+  mvpUserId         String?
+  mvpMinutes        Int      @default(0)
+  createdAt         DateTime @default(now())
+  room              Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, date])
+}
