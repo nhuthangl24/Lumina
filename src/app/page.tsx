@@ -587,14 +587,14 @@ function TasksPanelContent({ t }: { t: any }) {
         try { setTasks(JSON.parse(saved)); } catch (e) {}
       }
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   useEffect(() => {
     if (isMounted && !session) {
       localStorage.setItem("promodo_tasks", JSON.stringify(tasks));
       window.dispatchEvent(new Event('promodo_tasks_updated'));
     }
-  }, [tasks, isMounted, session]);
+  }, [tasks, isMounted, session?.user?.email]);
 
   const toggleTask = async (id: string | number) => {
     const task = tasks.find(t => t.id === id);

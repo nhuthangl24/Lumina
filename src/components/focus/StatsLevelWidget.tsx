@@ -15,7 +15,7 @@ export function StatsLevelWidget() {
         .then(data => setProfile(data))
         .catch(() => {});
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   useEffect(() => {
     const handlePomodoroComplete = () => {
@@ -29,7 +29,7 @@ export function StatsLevelWidget() {
     };
     window.addEventListener("promodo_pomodoro_complete", handlePomodoroComplete);
     return () => window.removeEventListener("promodo_pomodoro_complete", handlePomodoroComplete);
-  }, [session]);
+  }, [session?.user?.email]);
 
   if (!isVisible || !profile) return null;
 

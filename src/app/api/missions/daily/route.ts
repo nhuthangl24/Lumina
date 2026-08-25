@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -66,8 +66,26 @@ export async function GET() {
 
   // Create today's missions if not exist
   if (missions.length === 0) {
+    let templates = await prisma.dailyMissionTemplate.findMany();
+
+    if (templates.length === 0) {
+      // Seed initial templates if DB is empty
+      await prisma.dailyMissionTemplate.createMany({
+        data: MISSION_TEMPLATES.map(m => ({
+          name: m.name,
+          description: m.description,
+          type: m.type,
+          target: m.target,
+          coinReward: m.coinReward,
+          xpReward: m.xpReward,
+          gemReward: m.gemReward,
+        }))
+      });
+      templates = await prisma.dailyMissionTemplate.findMany();
+    }
+
     await prisma.userDailyMission.createMany({
-      data: MISSION_TEMPLATES.map(m => ({
+      data: templates.map(m => ({
         userId: session.user.id!,
         date: today,
         missionId: m.id,

@@ -15,7 +15,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
       fetch("/api/user/profile").then(r => r.json()).then(setProfile).catch(console.error);
       fetch("/api/tasks").then(r => r.json()).then(setTasks).catch(console.error);
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   const completedTasks = tasks.filter(t => t.done).length;
   const totalTasks = tasks.length;

@@ -314,7 +314,7 @@ export function MarketplaceModal({
   onClose: () => void;
   onEquipBackground: (url: string) => void;
 }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [items, setItems] = useState<MarketplaceItem[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -351,6 +351,8 @@ export function MarketplaceModal({
 
   // Fetch items & profile
   useEffect(() => {
+    if (status === "loading") return;
+
     async function fetchData() {
       setLoading(true);
       try {
@@ -376,7 +378,7 @@ export function MarketplaceModal({
       }
     }
     fetchData();
-  }, [session]);
+  }, [session?.user?.email, status]);
 
   const ownedItemIds = profile?.ownedItemIds ?? [];
   const userLevel = profile?.level ?? 1;

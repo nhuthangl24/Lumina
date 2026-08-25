@@ -84,7 +84,7 @@ export function StreakWidget() {
       const s = (session.user as any)?.streak ?? 0;
       setStreak(s);
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   useEffect(() => {
     // Also check login streak
@@ -110,7 +110,7 @@ export function StreakWidget() {
       localStorage.setItem("promodo_last_login_reward", today);
       checkStreak();
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   if (!session || streak === 0) return null;
 

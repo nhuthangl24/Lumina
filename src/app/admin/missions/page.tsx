@@ -13,7 +13,7 @@ export default function AdminMissionsPage() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    type: "focus",
+    type: "focus_minutes",
     target: 0,
     coinReward: 0,
     gemReward: 0,
@@ -43,7 +43,7 @@ export default function AdminMissionsPage() {
     } else {
       setEditingItem(null);
       setFormData({
-        name: "", description: "", type: "focus", target: 0,
+        name: "", description: "", type: "focus_minutes", target: 0,
         coinReward: 0, gemReward: 0, xpReward: 50
       });
     }
@@ -76,7 +76,7 @@ export default function AdminMissionsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this mission template? It won't affect users who already received it today.")) return;
+    if (!confirm("Xóa nhiệm vụ này? Các tiến độ nhiệm vụ cùng loại của người dùng trong ngày hôm nay cũng sẽ bị xóa.")) return;
     try {
       const res = await fetch(`/api/admin/missions?id=${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -197,9 +197,10 @@ export default function AdminMissionsPage() {
                   <div>
                     <label className="block text-xs text-white/50 mb-1">Mission Type *</label>
                     <select required value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[#222] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary">
-                      <option value="focus">Focus (Minutes)</option>
-                      <option value="pomodoro">Pomodoro (Count)</option>
-                      <option value="task">Task Completion</option>
+                      <option value="login">Daily Login</option>
+                      <option value="focus_minutes">Focus (Minutes)</option>
+                      <option value="complete_pomodoro">Pomodoro (Count)</option>
+                      <option value="complete_task">Task Completion</option>
                       <option value="room">Join Room</option>
                     </select>
                   </div>

@@ -92,6 +92,14 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
         const room = await res.json();
         onJoinRoom(room);
         toast.success("Phòng đã được tạo!");
+        
+        // Update Daily Mission for joining/creating a room
+        fetch("/api/missions/daily", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "room", amount: 1 })
+        }).then(() => window.dispatchEvent(new Event("promodo_mission_progress"))).catch(console.error);
+
       } else {
         toast.error("Lỗi tạo phòng, vui lòng thử lại!");
       }
@@ -115,6 +123,14 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
           if (joinRes.ok) {
             onJoinRoom(room);
             toast.success("Đã vào phòng!");
+            
+            // Update Daily Mission for joining a room
+            fetch("/api/missions/daily", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ type: "room", amount: 1 })
+            }).then(() => window.dispatchEvent(new Event("promodo_mission_progress"))).catch(console.error);
+
           } else {
             toast.error("Lỗi tham gia phòng!");
           }
@@ -140,6 +156,14 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
       
       onJoinRoom(room);
       toast.success(`Đã vào phòng "${room.name}"!`);
+      
+      // Update Daily Mission for joining a room
+      fetch("/api/missions/daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "room", amount: 1 })
+      }).then(() => window.dispatchEvent(new Event("promodo_mission_progress"))).catch(console.error);
+
     } catch (e) { console.error(e); }
   };
 

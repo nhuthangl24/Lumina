@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell, Check, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 interface Notification {
   id: string;
@@ -20,6 +21,18 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
+    
+    // Listen for realtime notifications from admin via Supabase
+    const channel = supabase.channel('system-notifications')
+      .on('broadcast', { event: 'new-notification' }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+    
+    // Poll for new notifications every 30 seconds as fallback
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
 
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -27,7 +40,12 @@ export function NotificationBell() {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchNotifications = async () => {
@@ -84,7 +102,10 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!isOpen) fetchNotifications();
+          setIsOpen(!isOpen);
+        }}
         className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-colors relative"
       >
         <Bell className="w-5 h-5 text-white" />

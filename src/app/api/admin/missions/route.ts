@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -77,6 +77,11 @@ export async function DELETE(req: Request) {
     const id = searchParams.get("id");
     
     if (!id) return new NextResponse("ID required", { status: 400 });
+
+    // Delete users' daily missions of this type as well
+    await prisma.userDailyMission.deleteMany({
+      where: { missionId: id }
+    });
 
     await prisma.dailyMissionTemplate.delete({
       where: { id }

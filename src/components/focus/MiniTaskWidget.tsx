@@ -21,7 +21,7 @@ export function MiniTaskWidget() {
         })
         .catch(console.error);
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   const toggleTask = async (id: string) => {
     // Optimistic UI update

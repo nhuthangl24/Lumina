@@ -21,7 +21,7 @@ export function DashboardOverlay({ onClose }: { onClose: () => void }) {
         .then(data => setProfile(data))
         .catch(console.error);
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   useEffect(() => {
     // Fetch completed tasks count for stats
@@ -40,7 +40,7 @@ export function DashboardOverlay({ onClose }: { onClose: () => void }) {
     if (session) {
       fetchStats();
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   const user = session?.user as any;
   const level = profile?.level || 1;

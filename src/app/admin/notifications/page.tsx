@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Send, Bell, Users, Globe } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminNotificationsPage() {
   const [title, setTitle] = useState("");
@@ -10,6 +11,17 @@ export default function AdminNotificationsPage() {
   const [type, setType] = useState("SYSTEM");
   const [targetEmail, setTargetEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [channel, setChannel] = useState<ReturnType<typeof supabase.channel> | null>(null);
+
+  useEffect(() => {
+    // Setup Supabase channel to broadcast notifications
+    const newChannel = supabase.channel('system-notifications').subscribe();
+    setChannel(newChannel);
+    
+    return () => {
+      supabase.removeChannel(newChannel);
+    };
+  }, []);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +47,15 @@ export default function AdminNotificationsPage() {
         setTitle("");
         setContent("");
         setTargetEmail("");
+        
+        // Trigger realtime update for clients
+        if (channel) {
+          channel.send({
+            type: 'broadcast',
+            event: 'new-notification',
+            payload: { type, targetEmail }
+          });
+        }
       } else {
         toast.error("Lỗi khi gửi thông báo.");
       }
