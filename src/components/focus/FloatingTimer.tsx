@@ -188,7 +188,7 @@ export function FloatingTimer() {
     console.log("toggleTimer clicked", { shouldSync, isHost, isRunning, mode, initialTime });
     if (shouldSync) {
       if (!isHost) {
-        toast.error("Chỉ chủ phòng mới có thể bắt đầu/dừng thời gian!");
+        toast.error(t("hostOnlyStartStop"));
         return;
       }
       const action = isRunning ? "pause" : (mode === "focus" ? "start_focus" : "start_break");
@@ -273,7 +273,7 @@ export function FloatingTimer() {
 
     if (shouldSync) {
       if (!isHost) {
-        toast.error("Chỉ chủ phòng mới có thể reset thời gian!");
+        toast.error(t("hostOnlyReset"));
         return;
       }
       // Optimistic Update
@@ -297,7 +297,7 @@ export function FloatingTimer() {
 
   const skipSession = async () => {
     if (shouldSync && !isHost) {
-      toast.error("Chỉ chủ phòng mới có thể bỏ qua session!");
+      toast.error(t("hostOnlySkip"));
       return;
     }
     handleTimerComplete();
@@ -311,7 +311,7 @@ export function FloatingTimer() {
 
     if (shouldSync) {
       if (!isHost) {
-        toast.error("Chỉ chủ phòng mới có thể đổi chế độ!");
+        toast.error(t("hostOnlyChangeMode"));
         return;
       }
       

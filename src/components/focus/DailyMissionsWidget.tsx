@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Target, CheckCircle, Circle, Coins, Zap, X, ChevronRight, Gift } from "lucide-react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 interface Mission {
   id: string;
@@ -22,6 +23,7 @@ interface Mission {
 
 export function DailyMissionsWidget() {
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -53,8 +55,8 @@ export function DailyMissionsWidget() {
         const data = await res.json();
         if (data.rewards?.completed?.length > 0) {
           data.rewards.completed.forEach((name: string) => {
-            toast.success(`🎯 Nhiệm vụ hoàn thành: ${name}`, {
-              description: `+${data.rewards.coins} Xu · +${data.rewards.xp} XP`,
+            toast.success(`🎯 ${t("missionCompleted")} ${name}`, {
+              description: `+${data.rewards.coins} Coins · +${data.rewards.xp} XP`,
               duration: 4000,
             });
           });
@@ -86,7 +88,7 @@ export function DailyMissionsWidget() {
         whileTap={{ scale: 0.97 }}
       >
         <Target className="w-4 h-4 text-emerald-400" />
-        <span className="text-white/80 text-xs font-medium">Nhiệm vụ</span>
+        <span className="text-white/80 text-xs font-medium">{t("missions")}</span>
         <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${allDone ? "bg-emerald-400/20 text-emerald-400" : "bg-white/10 text-white/60"}`}>
           {completedCount}/{missions.length}
         </span>
@@ -112,8 +114,8 @@ export function DailyMissionsWidget() {
                   <Target className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold text-sm">Nhiệm vụ hôm nay</h3>
-                  <p className="text-white/40 text-[11px]">Reset lúc 00:00 mỗi ngày</p>
+                  <h3 className="text-white font-semibold text-sm">{t("dailyMissions")}</h3>
+                  <p className="text-white/40 text-[11px]">{t("refreshAtMidnight")}</p>
                 </div>
               </div>
               <button onClick={() => setIsOpen(false)} className="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
@@ -124,10 +126,10 @@ export function DailyMissionsWidget() {
             {/* Progress bar */}
             <div className="px-4 pt-3 pb-2">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-white/50 text-[11px]">{completedCount}/{missions.length} hoàn thành</span>
+                <span className="text-white/50 text-[11px]">{completedCount}/{missions.length} {t("completed")}</span>
                 {allDone && (
                   <span className="text-emerald-400 text-[11px] font-bold flex items-center gap-1">
-                    <Gift className="w-3 h-3" /> Hoàn thành toàn bộ!
+                    <Gift className="w-3 h-3" /> {t("allDone")}
                   </span>
                 )}
               </div>
@@ -144,7 +146,9 @@ export function DailyMissionsWidget() {
             {/* Mission List */}
             <div className="p-3 space-y-2">
               {loading && missions.length === 0 ? (
-                <div className="text-center py-6 text-white/30 text-sm">Đang tải...</div>
+                <div className="text-center py-6 text-white/30 text-sm">{t("loading")}</div>
+              ) : missions.length === 0 ? (
+                <p className="text-white/50 text-xs text-center py-6">{t("noMissionsToday")}</p>
               ) : (
                 missions.map(mission => {
                   const progress = Math.min(mission.progress / mission.target, 1);

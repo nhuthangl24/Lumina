@@ -4,8 +4,10 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { BarChart3, CheckCircle2, Clock, CalendarDays, TrendingUp, Award, Zap } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
+  const { t } = useLanguage();
   const { data: session } = useSession();
   const [profile, setProfile] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
@@ -37,11 +39,11 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
             <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30">
               <Clock className="w-5 h-5 text-primary" />
             </div>
-            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">Tổng giờ học</h3>
+            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">{t("totalStudyHours")}</h3>
           </div>
           <div className="relative z-10">
             <span className="text-4xl font-bold text-white tracking-tighter">{focusHours}</span>
-            <span className="text-white/50 font-medium ml-1">giờ</span>
+            <span className="text-white/50 font-medium ml-1">{t("hours")}</span>
           </div>
         </motion.div>
 
@@ -54,11 +56,11 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
             </div>
-            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">Nhiệm vụ</h3>
+            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">{t("tasks")}</h3>
           </div>
           <div className="relative z-10 flex items-end gap-2">
             <span className="text-4xl font-bold text-white tracking-tighter">{completedTasks}</span>
-            <span className="text-white/50 font-medium pb-1">hoàn thành</span>
+            <span className="text-white/50 font-medium pb-1">{t("completedSuffix")}</span>
           </div>
         </motion.div>
       </div>
@@ -71,7 +73,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-white font-bold flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-indigo-400" />
-            Tỷ lệ hoàn thành nhiệm vụ
+            {t("taskCompletionRate")}
           </h3>
           <span className="text-xl font-bold text-indigo-400">{taskCompletionRate}%</span>
         </div>
@@ -86,7 +88,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
           </motion.div>
         </div>
         <p className="text-center text-xs text-white/40 mt-4">
-          Bạn đã hoàn thành {completedTasks} trên tổng số {totalTasks} nhiệm vụ đã tạo.
+          {t("tasksCompletedStatus").replace("{completed}", completedTasks.toString()).replace("{total}", totalTasks.toString())}
         </p>
       </motion.div>
 
@@ -100,11 +102,11 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
             <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center border border-orange-500/30">
               <Zap className="w-5 h-5 text-orange-400" />
             </div>
-            <span className="text-xs font-bold text-orange-400 bg-orange-400/10 px-2 py-1 rounded-full uppercase">Streak</span>
+            <span className="text-xs font-bold text-orange-400 bg-orange-400/10 px-2 py-1 rounded-full uppercase">{t("streak")}</span>
           </div>
           <div>
             <span className="text-3xl font-extrabold text-white">{profile?.streak || 0}</span>
-            <span className="text-white/50 text-sm ml-1">ngày liên tiếp</span>
+            <span className="text-white/50 text-sm ml-1">{t("consecutiveDays")}</span>
           </div>
         </motion.div>
 
@@ -116,7 +118,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
             <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
               <Award className="w-5 h-5 text-cyan-400" />
             </div>
-            <span className="text-xs font-bold text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded-full uppercase">Cấp độ</span>
+            <span className="text-xs font-bold text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded-full uppercase">{t("level")}</span>
           </div>
           <div>
             <span className="text-white/50 text-sm mr-1">Lv.</span>

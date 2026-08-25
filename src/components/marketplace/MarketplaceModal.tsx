@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/LanguageContext";
 import {
   X, Search, Star, Zap, ShoppingBag, Sparkles, Music,
   Wind, Sun, Image as ImageIcon, Cat, Pointer, Award,
@@ -48,16 +49,16 @@ interface DailyShopItem extends MarketplaceItem {
 }
 
 const CATEGORIES = [
-  { id: "all", label: "Tất cả", icon: ShoppingBag },
-  { id: "room_theme", label: "Room Theme", icon: ImageIcon },
-  { id: "uploads", label: "Ảnh của tôi", icon: ImageIcon },
-  { id: "weather", label: "Thời tiết", icon: Sun },
-  { id: "lighting", label: "Ánh sáng", icon: Sparkles },
-  { id: "ambient_sound", label: "Âm thanh", icon: Music },
-  { id: "pet", label: "Pet", icon: Cat },
-  { id: "effect", label: "Hiệu ứng", icon: Zap },
-  { id: "cursor", label: "Con trỏ", icon: Pointer },
-  { id: "badge", label: "Huy hiệu", icon: Award },
+  { id: "all", labelKey: "all", icon: ShoppingBag },
+  { id: "room_theme", labelKey: "roomTheme", icon: ImageIcon },
+  { id: "uploads", labelKey: "myImages", icon: ImageIcon },
+  { id: "weather", labelKey: "weather", icon: Sun },
+  { id: "lighting", labelKey: "lighting", icon: Sparkles },
+  { id: "ambient_sound", labelKey: "sound", icon: Music },
+  { id: "pet", labelKey: "pet", icon: Cat },
+  { id: "effect", labelKey: "effects", icon: Zap },
+  { id: "cursor", labelKey: "cursor", icon: Pointer },
+  { id: "badge", labelKey: "badge", icon: Award },
 ];
 
 const RARITY_CONFIG: Record<string, { label: string; color: string; glow: string; border: string }> = {
@@ -88,6 +89,7 @@ function ItemCard({
   onEquip: (item: MarketplaceItem) => void;
   onPreview: (item: MarketplaceItem) => void;
 }) {
+  const { t } = useLanguage();
   const rarity = RARITY_CONFIG[item.rarity] ?? RARITY_CONFIG.common;
   const isLocked = item.unlockLevel > 0 && userLevel < item.unlockLevel;
 
@@ -241,6 +243,7 @@ function HeroBanner({ items, onBuy, onPreview, ownedItemIds, userLevel }: {
   ownedItemIds: string[];
   userLevel: number;
 }) {
+  const { t } = useLanguage();
   const [idx, setIdx] = useState(0);
   const featured = items.filter(i => i.isFeatured).slice(0, 4);
 
@@ -270,7 +273,7 @@ function HeroBanner({ items, onBuy, onPreview, ownedItemIds, userLevel }: {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-black/40 ${rarity.color}`}>{rarity.label}</span>
-              {item.isFeatured && <span className="text-xs text-yellow-400 font-bold">⭐ Nổi bật</span>}
+              {item.isFeatured && <span className="text-xs text-yellow-400 font-bold">⭐ {t("sortFeatured")}</span>}
             </div>
             <h3 className="text-white font-bold text-xl">{item.name}</h3>
             <p className="text-white/60 text-xs mt-0.5 max-w-[280px] line-clamp-1">{item.description}</p>
@@ -314,6 +317,7 @@ export function MarketplaceModal({
   onClose: () => void;
   onEquipBackground: (url: string) => void;
 }) {
+  const { t } = useLanguage();
   const { data: session, status } = useSession();
   const [items, setItems] = useState<MarketplaceItem[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -372,7 +376,7 @@ export function MarketplaceModal({
           setProfile(profileData);
         }
       } catch (e) {
-        toast.error("Không thể tải Marketplace");
+        toast.error(t("loadMarketplaceError"));
       } finally {
         setLoading(false);
       }
@@ -385,7 +389,7 @@ export function MarketplaceModal({
 
   const customItems: MarketplaceItem[] = uploadedImages.map((url, i) => ({
     id: `custom-uploaded-${i}`,
-    name: `Ảnh của tôi ${i + 1}`,
+    name: `${t("myImages")} ${i + 1}`,
     description: "Ảnh đã tải lên",
     category: "uploads",
     price: 0,
@@ -425,7 +429,7 @@ export function MarketplaceModal({
     });
 
   const handleBuy = useCallback(async (item: MarketplaceItem) => {
-    if (!session) { toast.error("Vui lòng đăng nhập!"); return; }
+    if (!session) { toast.error(t("pleaseLogin")); return; }
     if (buying) return;
     setBuying(item.id);
 
@@ -438,7 +442,7 @@ export function MarketplaceModal({
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || "Mua thất bại");
+        toast.error(data.error || t("purchaseFailed"));
         return;
       }
 
@@ -450,9 +454,9 @@ export function MarketplaceModal({
       } : prev);
       // Dispatch event to update coin display in header without triggering full session refresh
       window.dispatchEvent(new CustomEvent("promodo_coins_updated", { detail: { coins: data.coins } }));
-      toast.success(`🎉 Mua thành công "${item.name}"!`);
+      toast.success(`🎉 ${t("purchaseSuccess")} "${item.name}"!`);
     } catch {
-      toast.error("Lỗi kết nối, thử lại nhé!");
+      toast.error(t("systemError"));
     } finally {
       setBuying(null);
     }
@@ -471,45 +475,45 @@ export function MarketplaceModal({
         } else if (item.imageUrl) {
           onEquipBackground(item.imageUrl);
           setEquippedState(prev => ({ ...prev, room_theme: item.imageUrl }));
-          toast.success(`🖼️ Đã trang bị "${item.name}"`);
+          toast.success(`🖼️ ${t("equipSuccess")} "${item.name}"`);
         }
         break;
       case "pet":
         dispatch("promodo_pet_equipped", { petId: item.id });
         setEquippedState(prev => ({ ...prev, pet: item.id }));
-        toast.success(`🐱 Pet "${item.name}" đã xuất hiện!`);
+        toast.success(`🐱 ${item.name} ${t("petSpawned")}`);
         break;
       case "weather":
         dispatch("promodo_weather_equipped", { id: item.id });
         setEquippedState(prev => ({ ...prev, weather: item.id }));
-        toast.success(`🌤️ Thời tiết "${item.name}" đã bật`);
+        toast.success(`🌤️ ${item.name} ${t("effectOn")}`);
         break;
       case "lighting":
         dispatch("promodo_lighting_equipped", { id: item.id });
         setEquippedState(prev => ({ ...prev, lighting: item.id }));
-        toast.success(`💡 Ánh sáng "${item.name}" đã bật`);
+        toast.success(`💡 ${item.name} ${t("effectOn")}`);
         break;
       case "effect":
         dispatch("promodo_effect_equipped", { id: item.id });
         setEquippedState(prev => ({ ...prev, effect: item.id }));
-        toast.success(`✨ Hiệu ứng "${item.name}" đã bật`);
+        toast.success(`✨ ${item.name} ${t("effectOn")}`);
         break;
       case "cursor":
         dispatch("promodo_cursor_equipped", { id: item.id });
         setEquippedState(prev => ({ ...prev, cursor: item.id }));
-        toast.success(`🖱️ Con trỏ "${item.name}" đã đổi`);
+        toast.success(`🖱️ ${item.name} ${t("cursorChanged")}`);
         break;
       case "ambient_sound":
         dispatch("promodo_sound_equipped", { id: item.id, name: item.name });
         setEquippedState(prev => ({ ...prev, ambient_sound: item.id }));
-        toast.success(`🎵 Âm thanh "${item.name}" đang phát`);
+        toast.success(`🎵 ${item.name} ${t("soundPlaying")}`);
         break;
       case "badge":
         dispatch("promodo_badge_equipped", { id: item.id, name: item.name });
-        toast.success(`🏅 Huy hiệu "${item.name}" đã trang bị`);
+        toast.success(`🏅 ${item.name} ${t("badgeEquipped")}`);
         break;
       default:
-        toast.success(`✅ Đã trang bị "${item.name}"`);
+        toast.success(`✅ ${t("equipSuccess")} "${item.name}"`);
     }
 
     // Sync to backend
@@ -532,7 +536,7 @@ export function MarketplaceModal({
     window.dispatchEvent(new CustomEvent("promodo_sound_equipped", { detail: null }));
     window.dispatchEvent(new CustomEvent("promodo_pet_equipped", { detail: { petId: null } }));
     setEquippedState({});
-    toast.success("🧹 Đã gỡ toàn bộ trang bị & hiệu ứng!");
+    toast.success(t("unequipAllSuccess"));
 
     fetch("/api/user/equip", {
       method: "POST",
@@ -567,7 +571,7 @@ export function MarketplaceModal({
         onEquipBackground(data.url);
         localStorage.setItem("promodo_background_url", data.url);
         setEquippedState(prev => ({ ...prev, room_theme: data.url }));
-        toast.success("✅ Đã đổi hình nền thành công!");
+        toast.success(t("bgChangeSuccess"));
 
         await fetch("/api/user/equip", {
           method: "POST",
@@ -582,10 +586,10 @@ export function MarketplaceModal({
         }).catch(console.error);
 
       } else {
-        toast.error("❌ Tải lên thất bại.");
+        toast.error(t("uploadFailed"));
       }
     } catch(err) {
-      toast.error("❌ Lỗi tải ảnh lên.");
+      toast.error(t("uploadError"));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -613,7 +617,7 @@ export function MarketplaceModal({
           </div>
           <div>
             <h2 className="text-white font-bold text-lg leading-none">Marketplace</h2>
-            <p className="text-white/40 text-xs mt-0.5">Cá nhân hóa không gian học tập của bạn</p>
+            <p className="text-white/40 text-xs mt-0.5">{t("marketplaceSubtitle")}</p>
           </div>
         </div>
 
@@ -624,7 +628,7 @@ export function MarketplaceModal({
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors text-xs font-semibold mr-2"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            Tắt tất cả hiệu ứng
+            {t("disableAllEffects")}
           </button>
           
           {profile && (
@@ -668,7 +672,7 @@ export function MarketplaceModal({
                   }`}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 truncate">{cat.label}</span>
+                <span className="flex-1 truncate">{t(cat.labelKey as any)}</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeCategory === cat.id ? "bg-white/20" : "bg-white/10 text-white/40"}`}>
                   {count}
                 </span>
@@ -680,14 +684,14 @@ export function MarketplaceModal({
             <div className="bg-gradient-to-br from-yellow-400/10 to-orange-400/10 border border-yellow-400/20 rounded-xl p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <Gift className="w-4 h-4 text-yellow-400" />
-                <span className="text-yellow-400 text-xs font-bold">Daily Shop</span>
+                <span className="text-yellow-400 text-xs font-bold">{t("dailyShop")}</span>
               </div>
-              <p className="text-white/50 text-[11px]">Vật phẩm giảm giá mỗi ngày</p>
+              <p className="text-white/50 text-[11px]">{t("dailyShopDesc")}</p>
               <button 
                 onClick={() => setActiveCategory("daily_shop")}
                 className="mt-2 w-full text-xs text-yellow-400 font-medium text-left hover:underline"
               >
-                Xem ngay →
+                {t("viewNow")}
               </button>
             </div>
           </div>
@@ -701,7 +705,7 @@ export function MarketplaceModal({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
               <input
                 type="text"
-                placeholder="Tìm kiếm vật phẩm..."
+                placeholder={t("searchItems")}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-primary/50"
@@ -712,7 +716,7 @@ export function MarketplaceModal({
               onChange={e => setSortBy(e.target.value as any)}
               className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/70 focus:outline-none focus:border-primary/50"
             >
-              <option value="featured" className="bg-[#111]">Nổi bật</option>
+              <option value="featured" className="bg-[#111]">{t("sortFeatured")}</option>
               <option value="price_asc" className="bg-[#111]">Giá: Thấp → Cao</option>
               <option value="price_desc" className="bg-[#111]">Giá: Cao → Thấp</option>
               <option value="rarity" className="bg-[#111]">Độ hiếm</option>
@@ -741,15 +745,15 @@ export function MarketplaceModal({
                 {/* Section title */}
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-semibold">
-                    {activeCategory === "daily_shop" ? "🔥 Daily Shop - Flash Sale" : (CATEGORIES.find(c => c.id === activeCategory)?.label ?? "Tất cả")}
-                    <span className="text-white/40 font-normal text-sm ml-2">({filteredItems.length} vật phẩm)</span>
+                    {activeCategory === "daily_shop" ? "🔥 Daily Shop - Flash Sale" : (CATEGORIES.find(c => c.id === activeCategory)?.labelKey ? t(CATEGORIES.find(c => c.id === activeCategory)?.labelKey as any) : t("all"))}
+                    <span className="text-white/40 font-normal text-sm ml-2">({filteredItems.length} {t("items")})</span>
                   </h3>
                 </div>
 
                 {filteredItems.length === 0 ? (
                   <div className="text-center py-16 text-white/30">
                     <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>Không tìm thấy vật phẩm nào</p>
+                    <p>{t("noItemsFound")}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-4">

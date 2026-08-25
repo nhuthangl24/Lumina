@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Search, UserPlus, Check, UserMinus, User } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/LanguageContext";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 
@@ -13,6 +14,7 @@ interface FriendsPanelProps {
 }
 
 export function FriendsPanel({ onClose }: FriendsPanelProps) {
+  const { t } = useLanguage();
   const { data: session } = useSession();
   const [friends, setFriends] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,7 +73,7 @@ export function FriendsPanel({ onClose }: FriendsPanelProps) {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.length < 3) return toast.error("Nhập ít nhất 3 ký tự");
+    if (searchQuery.length < 3) return toast.error(t("min3Chars"));
     setLoading(true);
     try {
       const res = await fetch(`/api/friends/search?q=${encodeURIComponent(searchQuery)}`);
@@ -90,10 +92,10 @@ export function FriendsPanel({ onClose }: FriendsPanelProps) {
       body: JSON.stringify({ action: "add", friendId })
     });
     if (res.ok) {
-      toast.success("Đã gửi lời mời kết bạn");
+      toast.success(t("friendRequestSent"));
       fetchFriends();
     } else {
-      toast.error("Gửi thất bại hoặc đã là bạn bè");
+      toast.error(t("sendFailed"));
     }
   };
 
@@ -104,7 +106,7 @@ export function FriendsPanel({ onClose }: FriendsPanelProps) {
       body: JSON.stringify({ action: "accept", friendshipId })
     });
     if (res.ok) {
-      toast.success("Đã chấp nhận kết bạn");
+      toast.success(t("friendAccepted"));
       fetchFriends();
     }
   };
@@ -112,7 +114,7 @@ export function FriendsPanel({ onClose }: FriendsPanelProps) {
   const handleRemoveFriend = async (friendshipId: string) => {
     const res = await fetch(`/api/friends?id=${friendshipId}`, { method: "DELETE" });
     if (res.ok) {
-      toast.success("Đã xóa");
+      toast.success(t("deleted"));
       fetchFriends();
     }
   };

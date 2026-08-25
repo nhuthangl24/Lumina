@@ -37,7 +37,7 @@ export function MusicPlayerWidget() {
   
   const [isPowerOn, setIsPowerOn] = useState(false);
   const [trackName, setTrackName] = useState("YouTube Player");
-  const [artistName, setArtistName] = useState("Đang phát nhạc nền");
+  const [artistName, setArtistName] = useState(t("nowPlaying"));
   const [isIframeReady, setIsIframeReady] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -223,7 +223,7 @@ export function MusicPlayerWidget() {
             <Music className="w-3 h-3 text-[#FF0000] flex-shrink-0" />
           </p>
           <p className="text-white/50 text-xs truncate">
-            {isPowerOn ? artistName : "Đã tạm dừng"}
+            {isPowerOn ? artistName : t("paused")}
           </p>
         </div>
 

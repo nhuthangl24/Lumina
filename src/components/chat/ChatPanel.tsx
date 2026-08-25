@@ -19,7 +19,7 @@ interface Message {
   };
 }
 
-export function ChatPanel({ roomId = null }: { roomId?: string | null }) {
+export function ChatPanel({ roomId = null, initialTarget = null }: { roomId?: string | null, initialTarget?: any }) {
   const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -28,7 +28,7 @@ export function ChatPanel({ roomId = null }: { roomId?: string | null }) {
 
   // Private chat states
   const [friends, setFriends] = useState<any[]>([]);
-  const [selectedFriend, setSelectedFriend] = useState<any | null>(null);
+  const [selectedFriend, setSelectedFriend] = useState<any | null>(initialTarget);
 
   useEffect(() => {
     if (!roomId && !selectedFriend) {

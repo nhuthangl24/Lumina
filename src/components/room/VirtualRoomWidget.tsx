@@ -11,10 +11,12 @@ import {
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useAmbientStore } from "@/store/useAmbientStore";
 import { useTimerStore } from "@/store/useTimerStore";
+import { useLanguage } from "@/lib/LanguageContext";
 
 interface RoomData {
   id: string;
@@ -57,8 +59,11 @@ interface RoomData {
   musicVotes: string | null;
 }
 
+const roomCache: Record<string, RoomData> = {};
+
 // ─── Lobby: Browse/Create/Join ───
 function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
+  const { t } = useLanguage();
   const { data: session } = useSession();
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,8 +95,9 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
       });
       if (res.ok) {
         const room = await res.json();
+        roomCache[room.id] = room;
         onJoinRoom(room);
-        toast.success("Phòng đã được tạo!");
+        toast.success(t("roomCreated"));
         
         // Update Daily Mission for joining/creating a room
         fetch("/api/missions/daily", {
@@ -101,11 +107,11 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
         }).then(() => window.dispatchEvent(new Event("promodo_mission_progress"))).catch(console.error);
 
       } else {
-        toast.error("Lỗi tạo phòng, vui lòng thử lại!");
+        toast.error(t("roomCreateError"));
       }
     } catch (e) {
       console.error(e);
-      toast.error("Lỗi hệ thống!");
+      toast.error(t("systemError"));
     }
     setCreating(false);
   };
@@ -121,8 +127,9 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
         if (room) {
           const joinRes = await fetch(`/api/rooms/${room.id}/join`, { method: "POST" });
           if (joinRes.ok) {
+            roomCache[room.id] = room;
             onJoinRoom(room);
-            toast.success("Đã vào phòng!");
+            toast.success(t("roomJoined"));
             
             // Update Daily Mission for joining a room
             fetch("/api/missions/daily", {
@@ -132,17 +139,17 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
             }).then(() => window.dispatchEvent(new Event("promodo_mission_progress"))).catch(console.error);
 
           } else {
-            toast.error("Lỗi tham gia phòng!");
+            toast.error(t("roomJoinError"));
           }
         } else {
-          toast.error("Không tìm thấy phòng!");
+          toast.error(t("roomNotFound"));
         }
       } else {
-        toast.error("Lỗi tải danh sách phòng!");
+        toast.error(t("roomListError"));
       }
     } catch (e) {
       console.error(e);
-      toast.error("Lỗi hệ thống!");
+      toast.error(t("systemError"));
     }
   };
 
@@ -150,12 +157,13 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
     try {
       const res = await fetch(`/api/rooms/${room.id}/join`, { method: "POST" });
       if (!res.ok) {
-        toast.error("Lỗi tham gia phòng!");
+        toast.error(t("roomJoinError"));
         return;
       }
       
+      roomCache[room.id] = room;
       onJoinRoom(room);
-      toast.success(`Đã vào phòng "${room.name}"!`);
+      toast.success(t("roomJoined"));
       
       // Update Daily Mission for joining a room
       fetch("/api/missions/daily", {
@@ -269,9 +277,10 @@ function RoomLobby({ onJoinRoom }: { onJoinRoom: (room: RoomData) => void }) {
 
 // ─── Main Room View ───
 function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) {
+  const { t } = useLanguage();
   const { data: session } = useSession();
-  const [room, setRoom] = useState<RoomData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [room, setRoom] = useState<RoomData | null>(roomCache[roomId] || null);
+  const [loading, setLoading] = useState(!roomCache[roomId]);
   const [showShareCard, setShowShareCard] = useState(false);
   const [activeTab, setActiveTab] = useState<"members" | "tasks" | "chat" | "stats" | "music" | "settings">("members");
   const [codeCopied, setCodeCopied] = useState(false);
@@ -284,11 +293,33 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const [isSynced, setIsSynced] = useState(true);
   const [kickConfirmId, setKickConfirmId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, userId: string, userName: string } | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
+  }, []);
 
   const isHost = session?.user?.id === room?.hostId;
   const { setSpotifyId, spotifyId } = useAmbientStore();
   const [newMusicId, setNewMusicId] = useState("");
   const [musicVotes, setMusicVotes] = useState<Record<string, string[]>>({});
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetch("/api/friends")
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const ids = data.map(f => f.user.id);
+            setFriendIds(new Set(ids));
+          }
+        })
+        .catch(console.error);
+    }
+  }, [session?.user?.id]);
 
   useEffect(() => {
     const syncStr = localStorage.getItem("promodo_room_sync");
@@ -321,7 +352,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
         }
       })
       .on('broadcast', { event: 'member-joined' }, ({ payload: data }) => {
-        toast(`👋 ${data.userName} đã vào phòng!`);
+        toast(`👋 ${data.userName} ${t("roomJoined")}`);
         fetchRoom();
       })
       .on('broadcast', { event: 'member-left' }, () => {
@@ -329,7 +360,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
       })
       .on('broadcast', { event: 'member-kicked' }, ({ payload }) => {
         if (payload.userId === session?.user?.id) {
-          toast.error("Bạn đã bị chủ phòng mời ra ngoài.");
+          toast.error(t("userKicked"));
           setRoomId(null);
         } else {
           fetchRoom();
@@ -341,7 +372,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
       .on('broadcast', { event: 'music-update' }, ({ payload: data }) => {
         setSpotifyId(data.playlistId);
         setRoom(prev => prev ? { ...prev, currentPlaylist: data.playlistId } : null);
-        toast("🎵 Nhạc phòng đã được đổi!");
+        toast(t("musicChanged"));
       })
       .on('broadcast', { event: 'music-votes-update' }, ({ payload: data }) => {
         setMusicVotes(data.votes);
@@ -522,7 +553,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
     });
     
     fetch(`/api/rooms/${roomId}/checkin`, { method: "POST" }).catch(e => console.error(e));
-    toast.success("✅ Xác nhận thành công!");
+    toast.success(t("confirmSuccess"));
     scheduleCheckin();
   };
 
@@ -531,20 +562,21 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
       const res = await fetch(`/api/rooms/${roomId}`);
       if (res.ok) {
         const data = await res.json();
+        roomCache[roomId] = data;
         setRoom(data);
         if (data.currentPlaylist) setSpotifyId(data.currentPlaylist);
         if (data.musicVotes) {
           try { setMusicVotes(JSON.parse(data.musicVotes)); } catch(e) {}
         }
       } else {
-        toast.error("Phòng đã bị đóng hoặc bị lỗi (500)!");
+        toast.error(t("roomClosed"));
         resetTimer();
         onLeave();
         return;
       }
     } catch (e) { 
       console.error(e); 
-      toast.error("Lỗi kết nối phòng!");
+      toast.error(t("roomConnectError"));
       onLeave();
     }
     setLoading(false);
@@ -623,7 +655,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
     setIsSynced(next);
     localStorage.setItem("promodo_room_sync", String(next));
     window.dispatchEvent(new CustomEvent("promodo_room_sync_changed", { detail: { isSynced: next } }));
-    toast.success(next ? "Đã BẬT đồng bộ với phòng" : "Đã TẮT đồng bộ với phòng");
+    toast.success(next ? t("syncOn") : t("syncOff"));
   };
 
   const handleKickUser = async (userId: string) => {
@@ -644,10 +676,10 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
         payload: { userId }
       });
       
-      toast.success("Đã đuổi người dùng.");
+      toast.success(t("userKicked"));
       fetchRoom();
     } catch(e) {
-      toast.error("Không thể đuổi người dùng.");
+      toast.error(t("userKickError"));
     }
   };
 
@@ -659,7 +691,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
   const buffPercent = memberCount >= 4 ? 25 : memberCount >= 2 ? 10 : 0;
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex flex-col h-full relative allow-context-menu">
       {/* AFK Check-in Popup */}
       <AnimatePresence>
         {showCheckin && (
@@ -680,11 +712,115 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
         )}
       </AnimatePresence>
 
+      {/* Context Menu for Users */}
+      {typeof window !== "undefined" && createPortal(
+        <AnimatePresence>
+          {contextMenu && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed z-[9999] bg-[#1a1a2e] border border-white/20 rounded-xl shadow-xl overflow-hidden min-w-[160px]"
+              style={{ top: contextMenu.y, left: contextMenu.x }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-3 py-2 border-b border-white/10 bg-white/5">
+                <span className="text-white text-xs font-bold truncate block">{contextMenu.userName}</span>
+              </div>
+              <div className="py-1">
+                {contextMenu.userId === session?.user?.id ? (
+                  <button 
+                    onClick={() => { 
+                      setContextMenu(null);
+                      window.dispatchEvent(new CustomEvent("promodo_open_dashboard"));
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    👤 {t("yourProfile")}
+                  </button>
+                ) : (
+                  <>
+                    {friendIds.has(contextMenu.userId) ? (
+                      <div className="w-full text-left px-4 py-2 text-sm text-green-400 font-medium">
+                        🤝 {t("friendsAlready")}
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={async () => { 
+                          try {
+                            const res = await fetch("/api/friends", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "add", friendId: contextMenu.userId })
+                            });
+                            if (res.ok) {
+                              toast.success("Đã gửi lời mời kết bạn!"); 
+                              setFriendIds(prev => new Set(prev).add(contextMenu.userId));
+                            } else {
+                              toast.error("Không thể gửi lời mời.");
+                            }
+                          } catch(e) {
+                            toast.error("Lỗi gửi lời mời.");
+                          }
+                          setContextMenu(null); 
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        🤝 {t("addFriend")}
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => { 
+                        setContextMenu(null);
+                        window.dispatchEvent(new CustomEvent("promodo_open_dm", { 
+                          detail: { 
+                            id: contextMenu.userId, 
+                            name: contextMenu.userName
+                          } 
+                        }));
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      💬 {t("sendMessage")}
+                    </button>
+                  </>
+                )}
+                
+                {isHost && contextMenu.userId !== session?.user?.id && (
+                  <>
+                    <div className="h-px bg-white/10 my-1" />
+                    <button 
+                      onClick={() => { setContextMenu(null); toast.error(t("muteDev")); }}
+                      className="w-full text-left px-4 py-2 text-sm text-orange-400 hover:bg-orange-500/10 transition-colors"
+                    >
+                      🔇 {t("mute")}
+                    </button>
+                    <button 
+                      onClick={() => { setContextMenu(null); handleKickUser(contextMenu.userId); }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      🚪 {t("kick")}
+                    </button>
+                    <button 
+                      onClick={() => { setContextMenu(null); toast.error(t("userBanned")); handleKickUser(contextMenu.userId); }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 font-bold transition-colors"
+                    >
+                      🚫 {t("ban")}
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
       {/* Room Header */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center justify-between mb-2">
           <button onClick={handleLeave} className="flex items-center gap-1 text-white/50 hover:text-white text-xs transition-colors">
-            <ArrowLeft className="w-3 h-3" /> Rời phòng
+            <ArrowLeft className="w-3 h-3" /> {t("leaveRoom")}
           </button>
           <button onClick={copyCode} className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1 rounded-full text-xs text-white/70 transition-colors">
             {codeCopied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
@@ -706,12 +842,12 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
       {/* Tab bar */}
       <div className="flex border-b border-white/10">
         {[
-          { id: "members", icon: Users, label: "Member" },
-          { id: "tasks", icon: ListTodo, label: "Nhiệm vụ" },
-          { id: "chat", icon: MessageSquare, label: "Chat" },
-          { id: "stats", icon: BarChart3, label: "Thống kê" },
-          { id: "music", icon: Music, label: "Nhạc" },
-          { id: "settings", icon: Settings, label: "Cài đặt" },
+          { id: "members", icon: Users, label: t("member") },
+          { id: "tasks", icon: ListTodo, label: t("tasks") },
+          { id: "chat", icon: MessageSquare, label: t("chat") },
+          { id: "stats", icon: BarChart3, label: t("stats") },
+          { id: "music", icon: Music, label: t("music") },
+          { id: "settings", icon: Settings, label: t("settings") },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
             className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors border-b-2 ${
@@ -734,12 +870,38 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* Members Tab */}
         {activeTab === "members" && (
-          <div className="p-4 space-y-2">
+          <div className="p-4 space-y-2 relative">
             {room.members.map(m => (
-              <div key={m.user.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-                afkUsers.has(m.user.id) ? "bg-gray-500/10 border-gray-500/20" : "bg-white/5 border-white/10"
-              }`}>
-                <div className="relative">
+              <div 
+                key={m.user.id} 
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-colors cursor-pointer hover:border-primary/50 ${
+                  afkUsers.has(m.user.id) ? "bg-gray-500/10 border-gray-500/20" : "bg-white/5 border-white/10"
+                }`}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Calculate position to not go off screen
+                  let x = e.clientX;
+                  let y = e.clientY;
+                  const menuWidth = 160;
+                  const menuHeight = 220;
+                  if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+                  if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
+                  setContextMenu({ x, y, userId: m.user.id, userName: m.user.name });
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  let x = e.clientX;
+                  let y = e.clientY;
+                  const menuWidth = 160;
+                  const menuHeight = 220;
+                  if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+                  if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
+                  setContextMenu({ x, y, userId: m.user.id, userName: m.user.name });
+                }}
+              >
+                <div className="relative pointer-events-none">
                   <Image src={m.user.image || "/default-avatar.png"} alt={m.user.name} width={36} height={36} className={`rounded-full ${afkUsers.has(m.user.id) ? "grayscale opacity-50" : ""}`} />
                   {m.user.id === room.hostId && (
                     <Crown className="absolute -top-1 -right-1 w-3.5 h-3.5 text-yellow-400" />
@@ -761,40 +923,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
                   </p>
                   <p className="text-white/40 text-[11px]">Lv.{m.user.level} • {m.user.totalPomodoros} 🍅</p>
                 </div>
-                {isHost && m.user.id !== session?.user?.id && (
-                  <div className="flex gap-1 shrink-0">
-                    <button 
-                      onClick={() => toast.error("Tính năng Mute đang được phát triển!")}
-                      className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded text-[10px] transition-colors border border-white/10"
-                      title="Chặn chat (Mute)"
-                    >
-                      MUTE
-                    </button>
-                    {kickConfirmId === m.user.id ? (
-                      <div className="flex items-center gap-1">
-                        <button 
-                          onClick={() => handleKickUser(m.user.id)}
-                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-[10px] font-bold transition-colors"
-                        >
-                          XÁC NHẬN ĐUỔI
-                        </button>
-                        <button 
-                          onClick={() => setKickConfirmId(null)}
-                          className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-[10px] transition-colors"
-                        >
-                          HỦY
-                        </button>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => setKickConfirmId(m.user.id)}
-                        className="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded text-[10px] font-bold transition-colors border border-red-500/20"
-                      >
-                        KICK
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Replaced quick actions with Context Menu */}
               </div>
             ))}
 
@@ -825,7 +954,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
             <form onSubmit={(e) => { e.preventDefault(); addTask(); }} className="flex gap-2 mb-4">
               <input
                 type="text" value={newTask} onChange={(e) => setNewTask(e.target.value)}
-                placeholder="Hôm nay tôi sẽ làm..."
+                placeholder={t("todayWillDo")}
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/50"
               />
               <button type="submit" className="px-3 py-2 bg-primary/20 text-primary hover:bg-primary/30 rounded-xl text-xs font-semibold transition-colors">
@@ -847,7 +976,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
                 </div>
               ))}
               {room.tasks.length === 0 && (
-                <p className="text-white/30 text-sm text-center py-4">Chưa có nhiệm vụ nào. Hãy thêm mục tiêu cho hôm nay!</p>
+                <p className="text-white/30 text-sm text-center py-4">{t("noTasksYet")}</p>
               )}
             </div>
           </div>
@@ -864,30 +993,30 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
         {activeTab === "music" && (
           <div className="p-4 space-y-4">
             <div className="flex justify-between items-center mb-4">
-              <h4 className="text-white/80 text-sm font-semibold">Báo cáo cá nhân</h4>
+              <h4 className="text-white/80 text-sm font-semibold">{t("personalReport")}</h4>
               <button onClick={() => setShowShareCard(true)} className="px-3 py-1.5 bg-primary/20 text-primary hover:bg-primary/30 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors">
-                <Download className="w-3 h-3" /> Thẻ tổng kết
+                <Download className="w-3 h-3" /> {t("summaryCard")}
               </button>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-2">Đang phát</h4>
+              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-2">{t("nowPlaying")}</h4>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center animate-pulse">
                   <Music className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-white text-sm font-semibold">YouTube ID: {room.currentPlaylist || spotifyId}</p>
-                  <p className="text-white/40 text-xs">Phát đồng bộ cho cả phòng</p>
+                  <p className="text-white/40 text-xs">{t("syncPlayingForRoom")}</p>
                 </div>
               </div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Đề cử nhạc</h4>
+              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">{t("nominateMusic")}</h4>
               <div className="flex gap-2 mb-4">
                 <input
                   type="text" value={newMusicId} onChange={(e) => setNewMusicId(e.target.value)}
-                  placeholder="Nhập YouTube Video ID..."
+                  placeholder={t("enterYoutubeId")}
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/50"
                 />
                 <button onClick={async () => {
@@ -914,16 +1043,16 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
                   }
                   setNewMusicId("");
                 }} className="px-4 py-2 bg-primary/20 text-primary hover:bg-primary/30 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap">
-                  {isHost ? "Đổi nhạc" : "Đề cử"}
+                  {isHost ? t("changeMusic") : t("nominate")}
                 </button>
               </div>
 
               {!isHost && Object.keys(musicVotes).length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-white/40 text-[10px] uppercase">Danh sách bình chọn (Quá 50% sẽ tự đổi)</p>
+                  <p className="text-white/40 text-[10px] uppercase">{t("voteList")}</p>
                   {Object.entries(musicVotes).map(([id, voters]) => (
                     <div key={id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/5">
-                      <span className="text-white text-xs font-mono">{id}</span>
+                      <span className="text-white text-xs font-mono truncate flex-1 mr-2" title={id}>{id}</span>
                       <button onClick={async () => {
                         // Optimistic UI for voting can be complex, but we'll just fire the request
                         // because we aren't broadcasting music-votes-update from client yet.
@@ -946,7 +1075,7 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
           <div className="p-4 space-y-4">
             {/* Today's stats */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3"> Hôm nay</h4>
+              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3"> {t("today")}</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-primary">{todayStats?.totalPomodoros || 0}</p>
@@ -954,14 +1083,14 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-green-400">{todayStats?.totalFocusMinutes || 0}m</p>
-                  <p className="text-white/40 text-[10px]">Tổng Focus</p>
+                  <p className="text-white/40 text-[10px]">{t("totalFocus")}</p>
                 </div>
               </div>
             </div>
 
             {/* Leaderboard */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3"> Bảng xếp hạng</h4>
+              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3"> {t("leaderboard")}</h4>
               <div className="space-y-2">
                 {room.members
                   .sort((a, b) => b.user.totalPomodoros - a.user.totalPomodoros)
@@ -1023,20 +1152,20 @@ function RoomView({ roomId, onLeave }: { roomId: string; onLeave: () => void }) 
         {activeTab === "settings" && (
           <div className="p-4 space-y-4">
             <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Cài đặt cá nhân</h4>
+              <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">{t("personalSettings")}</h4>
               {isHost ? (
                 <div className="text-center py-4">
                   <div className="w-10 h-10 bg-primary/20 border border-primary/30 rounded-full flex items-center justify-center mx-auto mb-2">
                     <Crown className="w-5 h-5 text-primary" />
                   </div>
-                  <p className="text-white text-sm font-semibold">Bạn là Chủ phòng</p>
-                  <p className="text-white/40 text-xs mt-1">Đồng hồ của bạn là mốc thời gian chuẩn cho toàn bộ thành viên trong phòng.</p>
+                  <p className="text-white text-sm font-semibold">{t("youAreHost")}</p>
+                  <p className="text-white/40 text-xs mt-1">{t("hostClockDesc")}</p>
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-white text-sm font-semibold">Đồng bộ Pomodoro</span>
-                    <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">Thời gian chạy theo phòng</p>
+                    <span className="text-white text-sm font-semibold">{t("syncPomodoro")}</span>
+                    <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">{t("timeSyncsWithRoom")}</p>
                   </div>
                   <div 
                     onClick={handleSyncToggle}

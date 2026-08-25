@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Cloud, Sun, CloudRain, X } from "lucide-react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export function ClockWeatherWidget() {
+  const { lang } = useLanguage();
   const [isVisible, setIsVisible] = useState(true);
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
@@ -12,25 +14,41 @@ export function ClockWeatherWidget() {
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
-      setTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
-      setDate(now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }));
+      
+      const localeMap: Record<string, string> = {
+        en: 'en-US',
+        vi: 'vi-VN',
+        zh: 'zh-CN'
+      };
+      const locale = localeMap[lang] || 'en-US';
+      
+      setTime(now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }));
+      setDate(now.toLocaleDateString(locale, { weekday: "long", month: "short", day: "numeric" }));
     };
     
     updateClock();
     const interval = setInterval(updateClock, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [lang]);
 
-  const fetchWeather = async (cityName: string) => {
+  const fetchWeather = async (cityName: string, currentLang: string) => {
     try {
-      const res = await fetch(`https://wttr.in/${encodeURIComponent(cityName)}?format=j1`);
+      const wttrLang = currentLang === 'zh' ? 'zh-cn' : currentLang;
+      const res = await fetch(`https://wttr.in/${encodeURIComponent(cityName)}?format=j1&lang=${wttrLang}`);
       if (res.ok) {
         const data = await res.json();
         const current = data.current_condition[0];
         const today = data.weather[0];
+        
+        let conditionDesc = current.weatherDesc[0].value;
+        const langKey = `lang_${wttrLang}`;
+        if (current[langKey] && current[langKey][0]) {
+          conditionDesc = current[langKey][0].value;
+        }
+
         setWeather({
           temp: current.temp_C,
-          condition: current.weatherDesc[0].value,
+          condition: conditionDesc,
           high: today.maxtempC,
           low: today.mintempC,
           aqi: "Good"
@@ -45,14 +63,14 @@ export function ClockWeatherWidget() {
     const loadCity = () => {
       const savedCity = localStorage.getItem("promodo_weather_city") || "Ho Chi Minh";
       setCity(savedCity);
-      fetchWeather(savedCity);
+      fetchWeather(savedCity, lang);
     };
     
     loadCity();
     
     window.addEventListener('promodo_settings_updated', loadCity);
     return () => window.removeEventListener('promodo_settings_updated', loadCity);
-  }, []);
+  }, [lang]);
 
   if (!isVisible) return null;
 

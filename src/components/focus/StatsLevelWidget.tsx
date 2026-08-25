@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trophy, Zap, X } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export function StatsLevelWidget() {
+  const { t } = useLanguage();
   const [isVisible, setIsVisible] = useState(true);
   const { data: session } = useSession();
   const [profile, setProfile] = useState<any>(null);
@@ -40,15 +42,15 @@ export function StatsLevelWidget() {
   const xpInCurrentLevel = xp % 500;
   const xpProgressPct = (xpInCurrentLevel / 500) * 100;
 
-  let tierName = "Bronze Tier";
+  let tierName = t("bronzeTier");
   let tierColor = "text-indigo-400";
   let tierBg = "bg-indigo-500/20 border-indigo-500/30";
   
-  if (level >= 50) { tierName = "Master Tier"; tierColor = "text-red-500"; tierBg = "bg-red-500/20 border-red-500/30"; }
-  else if (level >= 40) { tierName = "Diamond Tier"; tierColor = "text-cyan-400"; tierBg = "bg-cyan-500/20 border-cyan-500/30"; }
-  else if (level >= 30) { tierName = "Platinum Tier"; tierColor = "text-emerald-400"; tierBg = "bg-emerald-500/20 border-emerald-500/30"; }
-  else if (level >= 20) { tierName = "Gold Tier"; tierColor = "text-yellow-400"; tierBg = "bg-yellow-500/20 border-yellow-500/30"; }
-  else if (level >= 10) { tierName = "Silver Tier"; tierColor = "text-slate-300"; tierBg = "bg-slate-500/20 border-slate-500/30"; }
+  if (level >= 50) { tierName = t("masterTier"); tierColor = "text-red-500"; tierBg = "bg-red-500/20 border-red-500/30"; }
+  else if (level >= 40) { tierName = t("diamondTier"); tierColor = "text-cyan-400"; tierBg = "bg-cyan-500/20 border-cyan-500/30"; }
+  else if (level >= 30) { tierName = t("platinumTier"); tierColor = "text-emerald-400"; tierBg = "bg-emerald-500/20 border-emerald-500/30"; }
+  else if (level >= 20) { tierName = t("goldTier"); tierColor = "text-yellow-400"; tierBg = "bg-yellow-500/20 border-yellow-500/30"; }
+  else if (level >= 10) { tierName = t("silverTier"); tierColor = "text-slate-300"; tierBg = "bg-slate-500/20 border-slate-500/30"; }
 
   return (
     <motion.div 
@@ -68,7 +70,7 @@ export function StatsLevelWidget() {
           </div>
           <div>
             <p className="text-white text-sm font-bold">{tierName}</p>
-            <p className="text-white/50 text-xs">Level {level}</p>
+            <p className="text-white/50 text-xs">{t("level")} {level}</p>
           </div>
         </div>
         
@@ -80,7 +82,7 @@ export function StatsLevelWidget() {
 
       <div className="space-y-1">
         <div className="flex justify-between text-xs font-medium">
-          <span className="text-white/60">XP Progress</span>
+          <span className="text-white/60">{t("xpProgress")}</span>
           <span className="text-indigo-400">{xpInCurrentLevel} / 500</span>
         </div>
         <div className="w-full bg-black/40 rounded-full h-2 overflow-hidden relative">

@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/LanguageContext";
 
 const DOCK_ITEMS: Array<{ id: string, icon: any, label: string, action?: boolean, href?: string }> = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", action: true },
@@ -31,6 +32,7 @@ const DOCK_ITEMS: Array<{ id: string, icon: any, label: string, action?: boolean
 ];
 
 export function BottomDock({ onOpenPanel }: { onOpenPanel: (id: string) => void }) {
+  const { t } = useLanguage();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [unreadState, setUnreadState] = useState<Record<string, boolean>>({
     chat: false,
@@ -83,7 +85,7 @@ export function BottomDock({ onOpenPanel }: { onOpenPanel: (id: string) => void 
                 animate={{ opacity: 1, y: 0 }}
                 className="absolute -top-10 px-3 py-1.5 bg-black/80 backdrop-blur-md rounded-lg text-xs font-medium whitespace-nowrap border border-white/10 shadow-xl pointer-events-none"
               >
-                {item.label}
+                {t(item.id as any) || item.label}
               </motion.div>
             )}
           </motion.div>
@@ -100,7 +102,7 @@ export function BottomDock({ onOpenPanel }: { onOpenPanel: (id: string) => void 
         return (
           <button key={item.id} onClick={() => {
             if (item.id === "leaderboard") {
-              toast("Sắp ra mắt!", { description: "Tính năng Bảng xếp hạng đang được phát triển." });
+              toast(t("comingSoon"), { description: t("featureInDev") });
               return;
             }
             if (unreadState[item.id]) setUnreadState(prev => ({ ...prev, [item.id]: false }));

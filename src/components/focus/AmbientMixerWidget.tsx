@@ -27,7 +27,7 @@ export function AmbientMixerWidget() {
       {/* Rain */}
       <div className="flex items-center gap-3 group">
         <button 
-          onClick={() => setVolume("rain", rainVolume === 0 ? 50 : 0)}
+          onClick={() => setVolume("rain", rainVolume === 0 ? 100 : 0)}
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${rainVolume > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
         >
           <CloudRain className="w-4 h-4" />
@@ -46,7 +46,7 @@ export function AmbientMixerWidget() {
       {/* Cafe */}
       <div className="flex items-center gap-3 group">
         <button 
-          onClick={() => setVolume("cafe", cafeVolume === 0 ? 50 : 0)}
+          onClick={() => setVolume("cafe", cafeVolume === 0 ? 100 : 0)}
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${cafeVolume > 0 ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
         >
           <Coffee className="w-4 h-4" />
@@ -65,7 +65,7 @@ export function AmbientMixerWidget() {
       {/* Fire */}
       <div className="flex items-center gap-3 group">
         <button 
-          onClick={() => setVolume("fire", fireVolume === 0 ? 50 : 0)}
+          onClick={() => setVolume("fire", fireVolume === 0 ? 100 : 0)}
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${fireVolume > 0 ? 'bg-red-500/20 text-red-400' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
         >
           <Flame className="w-4 h-4" />
@@ -84,7 +84,7 @@ export function AmbientMixerWidget() {
       {/* Keyboard */}
       <div className="flex items-center gap-3 group">
         <button 
-          onClick={() => setVolume("office", officeVolume === 0 ? 50 : 0)}
+          onClick={() => setVolume("office", officeVolume === 0 ? 100 : 0)}
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${officeVolume > 0 ? 'bg-gray-500/20 text-gray-400' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
         >
           <Keyboard className="w-4 h-4" />
@@ -103,7 +103,7 @@ export function AmbientMixerWidget() {
       {/* Ocean */}
       <div className="flex items-center gap-3 group">
         <button 
-          onClick={() => setVolume("ocean", oceanVolume === 0 ? 50 : 0)}
+          onClick={() => setVolume("ocean", oceanVolume === 0 ? 100 : 0)}
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${oceanVolume > 0 ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
         >
           <Waves className="w-4 h-4" />

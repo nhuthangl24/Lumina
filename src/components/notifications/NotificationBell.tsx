@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Bell, Check, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/LanguageContext";
 
 interface Notification {
   id: string;
@@ -15,6 +16,7 @@ interface Notification {
 }
 
 export function NotificationBell() {
+  const { t, lang } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -126,14 +128,14 @@ export function NotificationBell() {
             className="absolute right-0 top-12 w-80 max-h-[400px] bg-[#1a1a1a]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden"
           >
             <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
-              <h3 className="font-bold text-white">Thông báo</h3>
+              <h3 className="font-bold text-white">{t("notifications")}</h3>
               {unreadCount > 0 && (
                 <button 
                   onClick={markAllAsRead}
                   className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1 font-semibold"
                 >
                   <Check className="w-3 h-3" />
-                  Đã đọc tất cả
+                  {t("markAllAsRead")}
                 </button>
               )}
             </div>
@@ -141,7 +143,7 @@ export function NotificationBell() {
             <div className="flex-1 overflow-y-auto p-2 custom-scrollbar flex flex-col gap-1">
               {notifications.length === 0 ? (
                 <div className="py-8 text-center text-white/50 text-sm">
-                  Không có thông báo nào.
+                  {t("noNotifications")}
                 </div>
               ) : (
                 notifications.map(n => (
@@ -166,7 +168,7 @@ export function NotificationBell() {
                         </div>
                         <p className="text-xs text-white/60 leading-relaxed whitespace-pre-wrap">{n.content}</p>
                         <p className="text-[10px] text-white/40 mt-2">
-                          {new Date(n.createdAt).toLocaleString('vi-VN')}
+                          {new Date(n.createdAt).toLocaleString(lang === 'vi' ? 'vi-VN' : lang === 'zh' ? 'zh-CN' : 'en-US')}
                         </p>
                       </div>
                       {!n.isRead && (

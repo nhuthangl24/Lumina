@@ -16,6 +16,7 @@ import { MusicPlayerWidget } from "@/components/focus/MusicPlayerWidget";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession, signOut } from "next-auth/react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 import { DashboardOverlay } from "@/components/focus/DashboardOverlay";
 import { AnalyticsDashboard } from "@/components/dashboard/AnalyticsDashboard";
 import { LayoutDashboard } from "lucide-react";
@@ -35,6 +36,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 export default function ImmersiveFocusPage() {
   const { data: session } = useSession();
   const [activePanel, setActivePanel] = useState<string | null>(null);
+  const [chatTarget, setChatTarget] = useState<any>(null);
   const [activeModal, setActiveModal] = useState<"marketplace" | "settings" | "dashboard" | null>(null);
   const [showFriends, setShowFriends] = useState(false);
 
@@ -73,6 +75,20 @@ export default function ImmersiveFocusPage() {
     setEquippedLighting(localStorage.getItem("promodo_lighting") || undefined);
     setEquippedEffect(localStorage.getItem("promodo_effect") || undefined);
     setEquippedCursor(localStorage.getItem("promodo_cursor") || undefined);
+
+    // Global Presence Tracking
+    let presenceChannel: ReturnType<typeof supabase.channel> | null = null;
+    if (session?.user?.id) {
+      presenceChannel = supabase.channel('presence-global');
+      presenceChannel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel!.track({
+            userId: session.user.id,
+            status: 'online',
+          });
+        }
+      });
+    }
 
     const savedVis = localStorage.getItem("promodo_widget_visibility");
     if (savedVis) {
@@ -126,7 +142,35 @@ export default function ImmersiveFocusPage() {
       } catch {}
     };
     window.addEventListener("promodo_pomodoro_complete", handleComplete);
-    return () => window.removeEventListener("promodo_pomodoro_complete", handleComplete);
+    
+    const handleOpenDM = (e: Event) => {
+      const user = (e as CustomEvent).detail;
+      setChatTarget(user);
+      setActivePanel("chat");
+      setActiveModal(null);
+      setShowFriends(false);
+    };
+    window.addEventListener("promodo_open_dm", handleOpenDM);
+
+    const handleOpenDashboard = () => {
+      setIsDashboardOpen(true);
+    };
+    window.addEventListener("promodo_open_dashboard", handleOpenDashboard);
+
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.allow-context-menu')) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('contextmenu', handleContextMenu);
+
+    return () => {
+      window.removeEventListener("promodo_pomodoro_complete", handleComplete);
+      window.removeEventListener("promodo_open_dm", handleOpenDM);
+      window.removeEventListener("promodo_open_dashboard", handleOpenDashboard);
+      window.removeEventListener('contextmenu', handleContextMenu);
+    };
   }, [checkAchievements]);
 
   // Listen for all equip events from marketplace
@@ -262,7 +306,7 @@ export default function ImmersiveFocusPage() {
                         className="w-full px-4 py-3 flex items-center gap-3 text-white/90 hover:bg-white/10 hover:text-white transition-colors text-sm font-medium text-left"
                       >
                         <User className="w-4 h-4" />
-                        Hồ sơ (Profile)
+                        {t("yourProfile")}
                       </button>
                       <div className="w-full h-px bg-white/10 my-1" />
                       <button 
@@ -270,7 +314,7 @@ export default function ImmersiveFocusPage() {
                         className="w-full px-4 py-3 flex items-center gap-3 text-red-400 hover:bg-white/10 hover:text-red-300 transition-colors text-sm font-medium text-left"
                       >
                         <X className="w-4 h-4" />
-                        Log Out
+                        {t("logout")}
                       </button>
                     </motion.div>
                   )}
@@ -407,7 +451,7 @@ export default function ImmersiveFocusPage() {
               {activePanel === "tasks" && <TasksPanelContent t={t} />}
               {activePanel === "notes" && <NotesPanelContent t={t} />}
               {activePanel === "music" && <MusicPanelContent t={t} />}
-              {activePanel === "chat" && <ChatPanel />}
+              {activePanel === "chat" && <ChatPanel initialTarget={chatTarget} />}
               {activePanel === "friends" && !session && (
                 <div className="h-full flex flex-col items-center justify-center p-8 text-center">
                   <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4">
@@ -457,7 +501,7 @@ export default function ImmersiveFocusPage() {
                   <div className="flex justify-between items-center p-5 border-b border-white/10 bg-white/5">
                     <h2 className="text-white font-heading font-semibold capitalize text-lg flex items-center gap-2">
                       <Settings2 className="w-5 h-5 text-white/70" />
-                      Cài đặt
+                      {t("settings")}
                     </h2>
                     <button
                       onClick={() => setActiveModal(null)}
@@ -478,7 +522,7 @@ export default function ImmersiveFocusPage() {
                   <div className="flex justify-between items-center p-5 border-b border-white/10 bg-white/5">
                     <h2 className="text-white font-heading font-semibold capitalize text-lg flex items-center gap-2">
                       <LayoutDashboard className="w-5 h-5 text-primary" />
-                      Bảng Điều Khiển
+                      {t("dashboard")}
                     </h2>
                     <button
                       onClick={() => setActiveModal(null)}
@@ -1043,14 +1087,14 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
     <div className="p-6 space-y-8">
       <div>
         <h4 className="text-white/60 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-          <Clock className="w-4 h-4" /> Thời gian học
+          <Clock className="w-4 h-4" /> {t("timerSettings")}
         </h4>
         
         <div className="space-y-3 mb-6">
           <div className="flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-colors">
             <div>
-              <span className="text-white text-sm font-semibold">Focus Length</span>
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">Thời lượng tập trung (Phút)</p>
+              <span className="text-white text-sm font-semibold">{t("focusLength")}</span>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">{t("focusLengthDesc")}</p>
             </div>
             <input 
               type="number" 
@@ -1062,8 +1106,8 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
           
           <div className="flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-colors">
             <div>
-              <span className="text-white text-sm font-semibold">Break Length</span>
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">Thời gian nghỉ (Phút)</p>
+              <span className="text-white text-sm font-semibold">{t("breakLength")}</span>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">{t("breakLengthDesc")}</p>
             </div>
             <input 
               type="number" 
@@ -1075,8 +1119,8 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
           
           <div className="flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-colors">
             <div>
-              <span className="text-white text-sm font-semibold">Chu kỳ</span>
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">Số phiên mỗi vòng</p>
+              <span className="text-white text-sm font-semibold">{t("cycle")}</span>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">{t("sessionsPerRound")}</p>
             </div>
             <input 
               type="number" 
@@ -1089,7 +1133,7 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
         </div>
 
         <h4 className="text-white/60 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-          <LayoutDashboard className="w-4 h-4" /> Hiển thị tiện ích (Widgets)
+          <LayoutDashboard className="w-4 h-4" /> {t("widgetSettings")}
         </h4>
         <div className="space-y-3 mb-6">
           {Object.entries({
@@ -1120,13 +1164,13 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
         </div>
 
         <h4 className="text-white/60 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-          <Settings2 className="w-4 h-4" /> Tự động hóa
+          <Settings2 className="w-4 h-4" /> {t("automation")}
         </h4>
         <div className="space-y-3">
           <div className="flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-colors">
             <div>
-              <span className="text-white text-sm font-semibold">Tự động bắt đầu nghỉ</span>
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">Tự nhảy sang Break khi xong Focus</p>
+              <span className="text-white text-sm font-semibold">{t("autoStartBreaks")}</span>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">{t("autoBreakDesc")}</p>
             </div>
             <div 
               onClick={() => setAutoStartBreaks(!autoStartBreaks)}
@@ -1138,8 +1182,8 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
           
           <div className="flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-colors">
             <div>
-              <span className="text-white text-sm font-semibold">Tự động bắt đầu học</span>
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">Tự nhảy sang Focus khi xong Break</p>
+              <span className="text-white text-sm font-semibold">{t("autoStartPomodoros")}</span>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">{t("autoFocusDesc")}</p>
             </div>
             <div 
               onClick={() => setAutoStartPomodoros(!autoStartPomodoros)}
@@ -1153,12 +1197,12 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
       
       <div>
         <h4 className="text-white/60 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-          <Headphones className="w-4 h-4" /> Thông báo
+          <Headphones className="w-4 h-4" /> {t("notifications")}
         </h4>
         <div className="flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-colors">
           <div>
-            <span className="text-white text-sm font-semibold">Âm thanh báo thức</span>
-            <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">Đổ chuông khi hết thời gian</p>
+            <span className="text-white text-sm font-semibold">{t("soundAlarms")}</span>
+            <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">{t("ringWhenDone")}</p>
           </div>
           <div 
             onClick={() => setSoundAlarms(!soundAlarms)}
@@ -1171,12 +1215,12 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
       
       <div>
         <h4 className="text-white/60 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-          <Cloud className="w-4 h-4" /> Thời tiết
+          <Cloud className="w-4 h-4" /> {t("weather")}
         </h4>
         <div className="flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-colors">
           <div>
-            <span className="text-white text-sm font-semibold">Thành phố</span>
-            <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">Hiển thị thời tiết khu vực</p>
+            <span className="text-white text-sm font-semibold">{t("city")}</span>
+            <p className="text-white/40 text-[10px] uppercase tracking-wider mt-0.5">{t("showWeather")}</p>
           </div>
           <input 
             type="text" 
@@ -1193,7 +1237,7 @@ function SettingsPanelContent({ onClose }: { onClose: () => void }) {
           onClick={handleApply}
           className="w-full py-3.5 bg-primary hover:bg-primary/80 active:scale-[0.98] text-white font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_30px_rgba(99,102,241,0.5)]"
         >
-          Lưu Cài Đặt
+          {t("saveSettings")}
         </button>
       </div>
     </div>
